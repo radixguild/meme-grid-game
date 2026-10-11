@@ -1,0 +1,118 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+:root {
+  --neon-green: #39ff14;
+  --neon-purple: #bf00ff;
+  --neon-cyan: #00e5ff;
+  --neon-red: #ff006e;
+  --neon-yellow: #ffe600;
+  --bg-dark: #0a0a0f;
+  --bg-card: #111118;
+  --bg-card-hover: #1a1a24;
+  --border-glow: rgba(57, 255, 20, 0.15);
+}
+
+body {
+  background: var(--bg-dark);
+  color: #e0e0e0;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* Cyberpunk grid lines */
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(57, 255, 20, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(57, 255, 20, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Neon glow effect */
+.neon-glow {
+  text-shadow: 0 0 7px var(--neon-green), 0 0 10px var(--neon-green), 0 0 21px var(--neon-green);
+}
+
+.neon-border {
+  box-shadow: 0 0 5px var(--neon-green), inset 0 0 5px rgba(57, 255, 20, 0.1);
+  border: 1px solid rgba(57, 255, 20, 0.3);
+}
+
+/* Cell animations */
+@keyframes cell-hit {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+@keyframes cell-complete {
+  0% { transform: scale(1); box-shadow: none; }
+  50% { transform: scale(1.2); box-shadow: 0 0 20px var(--neon-green); }
+  100% { transform: scale(1); box-shadow: 0 0 10px rgba(57, 255, 20, 0.3); }
+}
+
+@keyframes dice-tumble {
+  0% { transform: rotateX(0deg) rotateY(0deg); }
+  25% { transform: rotateX(90deg) rotateY(45deg); }
+  50% { transform: rotateX(180deg) rotateY(90deg); }
+  75% { transform: rotateX(270deg) rotateY(135deg); }
+  100% { transform: rotateX(360deg) rotateY(180deg); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes combo-flash {
+  0% { box-shadow: 0 0 0 rgba(255, 230, 0, 0); }
+  25% { box-shadow: 0 0 30px rgba(255, 230, 0, 0.6); }
+  50% { box-shadow: 0 0 60px rgba(255, 230, 0, 0.3); }
+  100% { box-shadow: 0 0 0 rgba(255, 230, 0, 0); }
+}
+
+@keyframes rug-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px) rotate(-1deg); }
+  40% { transform: translateX(4px) rotate(1deg); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
+}
+
+@keyframes score-pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.4); color: var(--neon-green); }
+  100% { transform: scale(1); }
+}
+
+@keyframes confetti-fall {
+  0% { transform: translateY(-100%) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+.animate-cell-hit { animation: cell-hit 0.3s ease-out; }
+.animate-cell-complete { animation: cell-complete 0.5s ease-out; }
+.animate-dice-tumble { animation: dice-tumble 1.2s ease-in-out; }
+.animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+.animate-slide-up { animation: slide-up 0.3s ease-out; }
+.animate-combo-flash { animation: combo-flash 0.8s ease-out; }
+.animate-rug-shake { animation: rug-shake 0.4s ease-out; }
+.animate-score-pop { animation: score-pop 0.4s ease-out; }
+.animate-confetti-fall { animation: confetti-fall 2s ease-in forwards; }
+
+@keyframes ticker {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.animate-ticker { animation: ticker 30s linear infinite; }
+
+/* Radix connect button custom styles */
+radix-connect-button::part(connect-button) {
+  background: linear-gradient(135deg, var(--neon-green), var(--neon-cyan));
+  border: none;
+  font-weight: 600;
+}

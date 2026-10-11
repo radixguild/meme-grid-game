@@ -1,0 +1,29 @@
+[workspace]
+members = ["meme-token", "meme-nfts"]
+resolver = "2"
+
+# The canonical Scrypto blueprint release profile. This workspace had NO
+# [profile.release] at all, which is not merely a size question:
+#
+#   overflow-checks = true  — WITHOUT this, release builds WRAP on arithmetic
+#     overflow instead of panicking. These blueprints custody XRD and mint a
+#     token; silent wraparound in a money path is the single worst default here,
+#     and it was the default. Scrypto's `Decimal` is checked internally, so this
+#     is defence for everything that is not a Decimal.
+#   panic = 'abort'  — canonical for a wasm blueprint (there is no unwinding on
+#     ledger), and it also removes the reason scrypto-test reached for a
+#     build-std no_std std, which is what made rust-src necessary at all.
+#   opt-level = 'z' / lto / codegen-units = 1 / strip  — smaller wasm. On-ledger
+#     package size is paid for once at deploy, in real XRD.
+#
+# Copied from the Radix Guild escrow blueprint's Cargo.toml (radixguild/guild,
+# escrow/scrypto/guild-marketplace-escrow), which builds and tests the same
+# libraries (scrypto 1.3.1 / scrypto-test 1.3.1) green on the same pinned 1.92.0.
+# Workspace-level, so both members inherit it.
+[profile.release]
+opt-level = 'z'
+lto = true
+codegen-units = 1
+panic = 'abort'
+strip = true
+overflow-checks = true

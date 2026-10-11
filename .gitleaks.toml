@@ -1,0 +1,27 @@
+# gitleaks config — meme-grid-game
+# Secret-scanning guardrail (pre-public prerequisite; this repo is a flip candidate).
+# Runs in CI via .github/workflows/secret-scan.yml. Pinned to gitleaks 8.30.x semantics
+# to match the CI job's pinned GITLEAKS_VERSION.
+#
+# Baseline (2026-09-05): a full-history scan (134 commits) against gitleaks' default
+# ruleset with no allowlist found ZERO leaks —
+#   gitleaks git --no-banner --redact -c /dev/null
+# `useDefault = true` below inherits that same ruleset. The allowlist stays empty on
+# purpose: there is nothing benign-but-flagged to carve out yet. If a future scan turns
+# up a genuine false positive (a doc placeholder, a test fixture shaped like a key),
+# add a narrowly-scoped, value-targeted regex here — never a whole-file or whole-path
+# exemption — so a real secret landing in the same file still trips the scanner.
+
+title = "meme-grid-game gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known non-secret placeholders and example files"
+
+# Example env files are documentation, not real secrets. Real .env is gitignored
+# and never committed.
+paths = [
+  '''\.env\.example$''',
+]

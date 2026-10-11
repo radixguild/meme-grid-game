@@ -1,0 +1,327 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  # No `branches:` filter, deliberately. With `branches: [main]` a pull request
+  # whose BASE is another feature branch matched nothing and got zero CI — not a
+  # failure, not a skip, just an empty checks list that reads as "nothing to run".
+  # PRs #22 and #23 sat that way for sixteen hours looking entirely normal. Every
+  # pull request gets the same gates now, whatever it targets.
+  #
+  # The cost is bounded by the concurrency block below: a superseded run on the
+  # same ref is cancelled rather than billed to completion, and stacked PRs are
+  # rare next to PRs into main.
+  pull_request:
+
+# Superseded runs are never cancelled without this, and private-repo minutes are
+# billed per job rounded UP. The scrypto job is the expensive one (a cold wasm32
+# build plus ledger tests), so a rapid second push otherwise bills a full extra
+# run for a commit nobody will look at. The Radix Guild repository
+# (radixguild/guild) added exactly this to its scrypto.yml after observing two
+# ~19-minute runs in flight on one branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend (lint + type-check)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run type-check
+      # The root web tests (src/**/__tests__, `npm run test:web`). The `npm test`
+      # in the server job below runs only server/'s own suite, so before this step
+      # nothing in CI executed these. That includes security-headers.test.ts, which
+      # pins next.config.ts's header baseline: reverting it would have passed CI.
+      # The job keeps its name because branch protection requires it by name.
+      - run: npm run test:web
+      # The production build, which lint and type-check between them do not cover.
+      # `next build` prerenders every route, so it catches the class of failure that
+      # only appears at render time -- a component that type-checks but throws while
+      # being statically generated. It is also the exact command the deploy recipe
+      # runs ("ALWAYS npm run build before pm2 restart"), so a green CI that never
+      # ran it can still hand the VPS a build that fails there. ~15s.
+      - run: npm run build
+
+  # The Scrypto blueprints had NO automated coverage at all until this job: the
+  # only workflow was frontend + server, so `scrypto/*/tests/lib.rs` had never
+  # executed anywhere. That is not a small gap -- these blueprints custody real
+  # XRD, and the v1 MEME vault was retired with its owner badge stranded (its
+  # owner rule can never be re-pointed; the account's key is held, so the XRD is
+  # recoverable with a proof of the badge) through a defect that a single
+  # instantiate-time assertion would have caught.
+  #
+  # It has to be Linux. macOS cannot run these: the ledger simulator compiles the
+  # blueprint to wasm32-unknown-unknown, and `blst` will not build for that target
+  # on this Mac. `cargo check --lib` is the most a Mac can say, so CI is the only
+  # place a green result means anything.
+  scrypto:
+    name: Scrypto (check + blueprint tests)
+    runs-on: ubuntu-latest
+    # 70, not 45, and the reason is the COLD-cache case specifically. A warm run is
+    # ~6-10 minutes. A cold one (new cache key, or a Cargo.lock change) spent 37
+    # minutes just reaching the CLI step on run 32554863950 -- full dependency
+    # compile, wasm build and ledger tests -- and then had 7 minutes left for a step
+    # that needs ~17. The ceiling covers a cold correctness build plus the capped
+    # install below; it is not there to absorb a slow steady state.
+    #
+    # Raising this was previously ruled out in favour of caching the binary, which is
+    # done. The step timeout is what makes the ceiling safe rather than a place for
+    # slowness to hide: the expensive optional step can no longer grow into it.
+    timeout-minutes: 70
+    defaults:
+      run:
+        working-directory: scrypto
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # 2, not 1: on a pull_request HEAD is the ephemeral merge commit, and
+          # HEAD^1 is the base branch tip, so `git diff HEAD^1 HEAD` is exactly
+          # the PR's change set — no API call, no token, no third-party action.
+          fetch-depth: 2
+
+      # Cost gate. This job averaged 355 s × 92 runs in 2026-09 (605 billed
+      # minutes, the single most expensive job in the fleet) and most of those
+      # runs touched nothing under scrypto/. A pull request that leaves scrypto/
+      # and this workflow alone skips every step below and reports green in
+      # seconds; the job keeps its NAME, so branch protection is unaffected
+      # (a workflow-level `paths:` filter would instead leave the required
+      # check un-reported and the PR stuck on "Expected"). Pushes to main
+      # always run in full — that is the result the deploy artifacts come from.
+      - name: Decide whether scrypto/ changed
+        id: scope
+        working-directory: .
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"; echo "$EVENT event — full run"; exit 0
+          fi
+          changed=$(git diff --name-only HEAD^1 HEAD -- scrypto .github/workflows/ci.yml)
+          if [ -n "$changed" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"; printf 'scrypto change:\n%s\n' "$changed"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"; echo "no change under scrypto/ or in this workflow — skipping check, build and tests"
+          fi
+
+      # rustup ships on ubuntu-latest, so the toolchain needs no third-party
+      # action -- consistent with .npmrc's ignore-scripts posture elsewhere in
+      # this repo. rust-toolchain.toml pins the VERSION (1.92.0) and the target;
+      # rustup installs what it names. The target is added explicitly so a change
+      # there cannot silently drop it, and the versions are printed because "which
+      # compiler actually ran" was the whole question for three failed runs.
+      #
+      # rust-src IS required, and the pin does NOT remove the need for it. Run
+      # 32458602072 settled this by separating the two failures for the first time:
+      # with 1.92.0 pinned and no rust-src, the explicit "Blueprint wasm build"
+      # step PASSED -- so the pin genuinely fixed the link error -- and then the
+      # ledger tests still failed with
+      #   error: ".../1.92.0-.../lib/rustlib/src/rust/library/Cargo.lock" does not
+      #   exist, unable to build with the standard library
+      # because scrypto-test's simulator does a build-std-style wasm build of its
+      # own and needs the std SOURCE.
+      #
+      # So both earlier diagnoses were half right and neither alone was enough:
+      #   rust-src on `stable` (1.98) -> gets past std, dies at LINK.
+      #   pin to 1.92.0 without rust-src -> links fine, dies at std.
+      #   pin to 1.92.0 WITH rust-src -> both paths satisfied.
+      # The standing warning still holds in its original sense: rust-src is not a
+      # fix for a LINK error. It is the fix for the std-source error, on whatever
+      # compiler rust-toolchain.toml pins.
+      - name: Install pinned toolchain, wasm32 target and rust-src
+        if: steps.scope.outputs.run == 'true'
+        run: |
+          rustup show active-toolchain
+          rustup target add wasm32-unknown-unknown
+          rustup component add rust-src
+          rustc --version && cargo --version
+
+      # The dependency build only. The scrypto CLI has its own cache below -- see
+      # there for why the two must not share a key.
+      #
+      # Paths are listed as bare paths and nothing else: `path:` is a literal block
+      # scalar, so a `#` line inside it is not a comment, it becomes a path pattern.
+      # Explanations go here, above the key.
+      - name: Cache cargo registry and build
+        if: steps.scope.outputs.run == 'true'
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            scrypto/target
+          # rust-toolchain.toml is IN the key on purpose. Keyed on Cargo.lock
+          # alone, changing the pinned compiler restores a scrypto/target built
+          # by the previous one -- which is precisely the state this change
+          # exists to get out of.
+          #
+          # `-v2-` dates from when this entry also carried ~/.cargo/bin and the
+          # path list changed under it. The `clis1.3.1` segment is vestigial now
+          # that the CLI has its own cache, and is kept ON PURPOSE: this entry is
+          # ~1.7 GB, the key is what makes it restore, and renaming it to something
+          # tidier would throw that away and force a 48-minute cold rebuild to buy
+          # nothing. Accuracy lives in this comment; the key is just an identifier.
+          key: scrypto-v2-${{ runner.os }}-clis1.3.1-${{ hashFiles('scrypto/Cargo.lock', 'scrypto/rust-toolchain.toml') }}
+          # A real PREFIX of the key, so a Cargo.lock change still restores the
+          # previous build. The old restore-key was `scrypto-<os>-<hash of
+          # rust-toolchain.toml>-`, which is not a prefix of a key built from a
+          # hash of BOTH files -- it could never match anything, so every
+          # dependency change was a cold build.
+          restore-keys: |
+            scrypto-v2-${{ runner.os }}-clis1.3.1-
+
+      # The CLI gets its OWN cache, with its own key, and that separation is the
+      # whole point rather than tidiness.
+      #
+      # Folding it into the cache above did not work, for a reason worth writing
+      # down: actions/cache saves at the END of the job, and on run 32556577462 the
+      # install had already been cut off by its timeout, so the entry was written
+      # with an EMPTY ~/.cargo/bin. Since actions/cache never UPDATES an existing
+      # key, that empty result was then permanent -- every later run would restore
+      # "no binary" and rebuild it, forever, while looking like it had a cache.
+      #
+      # Keyed on the version alone, so it is independent of Cargo.lock: the binary
+      # does not change when this workspace's dependencies do, and it gets saved the
+      # first time an install actually finishes. Bumping the pinned version below is
+      # what invalidates it.
+      - name: Cache the scrypto CLI binary
+        if: steps.scope.outputs.run == 'true'
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/.crates.toml
+            ~/.cargo/.crates2.json
+          key: radix-clis-${{ runner.os }}-1.3.1
+
+      # --locked: Cargo.lock is committed, so a dependency drifting under us
+      # should fail the build rather than be silently resolved to something new.
+      - name: Check (all targets)
+        if: steps.scope.outputs.run == 'true'
+        run: cargo check --all-targets --locked
+
+      # Build the wasm explicitly BEFORE the tests, mirroring the Radix Guild
+      # repository's proven scrypto.yml. Two reasons, and the second is why it is
+      # its own step:
+      # `cargo check` NEVER LINKS, so it structurally cannot catch a link error --
+      # and scrypto-test's ledger simulator shells out to do this same build, then
+      # swallows the compiler's stderr into a bare
+      # `CargoBuildFailure(ExitStatus(...))`. Every ledger test then reports the
+      # identical opaque panic at compile.rs:133 with the real message nowhere in
+      # the log. That is how ONE missing toolchain pin read as 13 broken tests
+      # across three runs. Here it fails loudly, once, saying what is wrong.
+      - name: Blueprint wasm build (this links — `cargo check` cannot catch it)
+        if: steps.scope.outputs.run == 'true'
+        run: cargo build --release --target wasm32-unknown-unknown --locked
+
+      # --no-fail-fast: without it, cargo stops at the first failing crate, and
+      # meme-nfts sorts before meme-token -- so one broken crate silently hid the
+      # entire meme-token suite (the one pinning the v2 badge split).
+      - name: Blueprint tests
+        if: steps.scope.outputs.run == 'true'
+        run: cargo test --locked --no-fail-fast
+
+      # Publish the deployable artifacts from the SAME run that just tested them.
+      #
+      # macOS cannot build these at all -- blst will not compile for wasm32 -- so a
+      # deploy needs a Linux build from somewhere. The alternatives were installing a
+      # Rust toolchain on the production VPS, or building on a laptop that physically
+      # cannot. Taking them from CI means the wasm published on-chain is the exact one
+      # whose ledger tests passed, from a known commit.
+      #
+      # `scrypto build`, not `cargo build`: the deploy needs the .rpd package
+      # definition alongside the .wasm (deploy-meme-token.ts feeds it through
+      # rpdToManifestValue), and only the scrypto CLI emits one. That is why
+      # radix-clis is installed despite the earlier cargo build having already
+      # compiled everything.
+      #
+      # continue-on-error throughout: artifacts are a deploy convenience, not a
+      # correctness gate. A packaging mistake must never turn this job red and block
+      # a merge whose tests actually passed.
+      # Version-pinned, not floating. This binary PRODUCES THE ARTIFACT that gets
+      # published on-chain, so "whatever is newest on crates.io that day" is the
+      # wrong dependency policy for it -- the same commit should package the same
+      # way next month. 1.3.1 matches the scrypto/scrypto-test 1.3.1 this workspace
+      # builds against. The version also appears in the cache key above, so bumping
+      # it here invalidates the cached binary rather than silently keeping the old
+      # one. Skips instantly on a cache hit ("already installed").
+      # timeout-minutes HERE is the load-bearing part, not continue-on-error.
+      # continue-on-error only survives a step FAILING; it does nothing about a step
+      # running long, and a JOB timeout kills everything regardless of it. So the
+      # step this file already calls "a deploy convenience, not a correctness gate"
+      # could still fail the whole job — including the blueprint tests that had
+      # already passed — purely by being slow. That is what happened on run
+      # 32554863950. Capped, a slow install now aborts itself, the `if` below skips
+      # packaging, and the job stays green on the results that actually gate a merge.
+      #
+      # radixdlt publishes no prebuilt binaries (v1.3.1 has zero release assets), so
+      # building from source is the only option and the cache is the real fix; this
+      # is the seatbelt for the runs where the cache misses.
+      - name: Install scrypto CLI
+        id: clis
+        if: steps.scope.outputs.run == 'true'
+        continue-on-error: true
+        timeout-minutes: 35
+        run: cargo install radix-clis --version 1.3.1 --locked
+
+      - name: Build deployable artifacts (wasm + rpd)
+        id: artifacts
+        if: steps.clis.outcome == 'success'
+        continue-on-error: true
+        run: |
+          scrypto build --path meme-token
+          scrypto build --path meme-nfts
+          mkdir -p artifacts
+          find . -path '*release*' -name '*.wasm' -exec cp {} artifacts/ ';'
+          find . -path '*release*' -name '*.rpd' -exec cp {} artifacts/ ';'
+          ls -la artifacts/
+
+      - name: Upload blueprint artifacts
+        if: steps.artifacts.outcome == 'success'
+        continue-on-error: true
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          # head.sha, NOT github.sha. On a pull_request event github.sha is the
+          # EPHEMERAL merge commit GitHub creates to test the merge result -- an
+          # object that exists nowhere in the repository, so `git cat-file` on it
+          # fails and the artifact cannot be traced back to anything. Verified on
+          # run 32553330749, which published blueprints-d05193e5… for a branch
+          # whose head was 01a78f0. That silently voids this job's whole reason for
+          # publishing artifacts: that the wasm going on-chain is the one whose
+          # ledger tests passed, FROM A KNOWN COMMIT. Falls back to github.sha for
+          # push events, where it is already the real commit.
+          name: blueprints-${{ github.event.pull_request.head.sha || github.sha }}
+          path: scrypto/artifacts/
+          if-no-files-found: warn
+          retention-days: 90
+
+  server:
+    name: Server (type-check + tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - run: npm ci
+      # .npmrc sets ignore-scripts=true (supply-chain hardening), which also
+      # skips better-sqlite3's native build — rebuild just that one package.
+      - run: npm rebuild better-sqlite3
+      - run: npx tsc --noEmit
+      - run: npm test

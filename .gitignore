@@ -1,0 +1,60 @@
+# ── Build + dependencies ────────────────────────────────
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+server/dist/
+scrypto/target/
+server/bun.lock
+# Rollback copies of the build output kept on the box (.next.bak-1001/, server/dist.bak-0928/ …).
+# Tailwind's automatic source detection scans every file git does not ignore, so without these
+# lines their compiled JS and binary cache files feed junk classes into the live CSS.
+/.next.bak*/
+/server/dist.bak*/
+
+# ── Runtime state (DB, local data) ──────────────────────
+*.db
+*.db-shm
+*.db-wal
+data/
+
+# ── Secrets (anything containing signing keys, tokens, admin creds) ──
+# Rule: commit only `*.example` templates. Actual values never.
+.env
+.env.*
+!.env.example
+!.env.*.example
+secrets.env
+secrets.env.*
+secrets.*.env
+*.secrets
+.secrets/
+*.pem
+*.key
+!*.pub.key
+
+# Note: deploy-state.json is INTENTIONALLY tracked. It stores the
+# public on-chain addresses (packages, components, resources, txids,
+# deployer account) produced by deploy-meme-token.ts and deploy-nfts.ts.
+# These are already public on mainnet — tracking them makes deploy
+# state reproducible and reviewable in PRs. Do NOT add secrets to it.
+
+# ── Editor / OS cruft ───────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
+scrypto/build/
+
+# Claude agent worktrees (local only)
+.claude/worktrees/
+
+# adws/ (agentic dev workflow scaffold) and .claude/skills/ (skill experiments) are an
+# experiment scaffold pending an operator keep/kill decision — not committed either way yet.
+adws/
+.claude/skills/
+
+# Retired docs kept on this machine only
+.local-archive/

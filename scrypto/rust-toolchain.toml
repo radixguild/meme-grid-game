@@ -1,0 +1,20 @@
+# PINNED, not "stable". Under stable (1.98.0 on 2026-08-21) the blueprint's
+# wasm32 build fails at LINK time:
+#   rust-lld: error: undefined symbol: buffer_consume / object_call / sys_panic /
+#   object_new / actor_emit_event / actor_open_field / object_globalize
+# Those are Radix Engine host functions that the `scrypto` crate declares as wasm
+# IMPORTS. Newer Rust made wasm-ld reject undefined symbols by default, so the
+# linker refuses them instead of emitting them as imports, and every ledger test
+# dies before its body runs.
+#
+# 1.92.0 is not a guess: the sibling Radix Guild repository (radixguild/guild)
+# builds and TESTS the same libraries green on it (scrypto 1.3.1 / scrypto-test
+# 1.3.1, identical to this workspace) via .github/workflows/scrypto.yml, last
+# success 2026-08-16.
+#
+# Pinning here rather than only in CI so a local `cargo test` and the runner
+# resolve the same compiler. Moving off 1.92.0 means re-proving the wasm LINK,
+# not just that `cargo check` passes -- check never links.
+[toolchain]
+channel = "1.92.0"
+targets = ["wasm32-unknown-unknown"]

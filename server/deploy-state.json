@@ -1,0 +1,30 @@
+{
+  "_readme": [
+    "Public on-chain addresses only — never secrets (see .gitignore note).",
+    "There is no 'memeToken' key any more. Two v1 vaults exist on mainnet and BOTH",
+    "have an immutable owner role (updater: 'None', verified 2026-08-21).",
+    "They are recorded below as tombstones so nothing re-adds them, and the deploy",
+    "script keys off 'memeTokenV2' so it can never reuse a dead deployment."
+  ],
+  "memeTokenV1Dead": {
+    "_note": "PRODUCTION v1 — this is the pair the live game used, and the one holding the stranded XRD. Retired: its owner+admin badge sits in account_rdx12xgra93fqw4u0nmwhlu5rs7f5gvg807rstd54kxwwy2alhxz223v2x, whose key is held, so the vault's XRD is recoverable with a proof of that badge; moving the badge to another operator-held account is planned. See docs/VAULT-V1-LOST.md.",
+    "componentAddress": "component_rdx1czh262wvmm8zpmq4el98v50557f7zu5ge6yp64cqhjecl72tj6lgxy",
+    "packageAddress": "package_rdx1ph68jx0h3yattltv9j",
+    "ownerBadge": "resource_rdx1t42g9rxmpq7e07mdtzeha49t6fyvyy4ftwwh2qfzymdse2a0qtugls",
+    "memeResource": "resource_rdx1t4trlp2hwzlt60g9g2mfwetlpt62zqg2kxl6hdsmvl7tq63y6sdrl7",
+    "strandedXrd": "160",
+    "_packageNote": "packageAddress is truncated as read from the Gateway blueprint reference — re-read it in full before quoting it anywhere authoritative."
+  },
+  "memeTokenV1Unused": {
+    "_note": "An EARLIER v1 deploy that never carried traffic: 0 XRD, total_minted 0, and its MEME resource has zero supply. This block was what deploy-state.json recorded as 'memeToken' until 2026-08-21, which made the file disagree with the live env — the running game used memeTokenV1Dead's addresses, not these. Also an immutable owner role (updater: 'None').",
+    "packageAddress": "package_rdx1p45cvggpk2ur5s07urvgml7xzdsqslgn78wjhpph0t0vyfaztxlgxj",
+    "publishTx": "txid_rdx1y347l0082wyfvcq3y8duuylgwntcenptekt0g27ff33ye9rqv0qszyvlwu",
+    "componentAddress": "component_rdx1czzugtuaus06530ylshhxz5a2vzeah43agu5a7emg0cgekpu040cs5",
+    "ownerBadge": "resource_rdx1t49c6zy4j5gmw76axs50xjlgjcqtgkq0tntjkqltn7c2et8j73qwka",
+    "memeResource": "resource_rdx1tk6hk47dw9ad3f8g5snc2acv32qpkrtkaa3k0jn2rq9gnzxq6ghdp2",
+    "instantiateTx": "txid_rdx1y9s7z9vjgtq8mkdvumu6uz8hhmrt46f7xs6kxnw6de9xe6r9d7fqh5t7ad"
+  },
+  "_updated": "2026-08-21T00:00:00.000Z",
+  "_network": "mainnet",
+  "_deployerAccount": "account_rdx128lggt503h7m2dhzqnrkkqv4zklxcjmdggr8xxtqy8e47p7fkmd8cx"
+}
