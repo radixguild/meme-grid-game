@@ -7,7 +7,7 @@
 > operator moved about 505 XRD out of that account to another operator-held account. The account
 > still holds the owner badge (×1) and a small XRD fee reserve, and the vault still holds
 > **160 XRD**. On 2026-10-11 the operator decided not to recover it: the badge stays in that
-> account and the 160 XRD stays in the vault. **Neither will be moved.** What stands: the owner
+> account and the 160 XRD stays in the vault. **Neither has been moved.** What stands: the owner
 > rule can never be re-pointed, the two-vault confusion, the design lesson, and the inflow cut —
 > the game stays off v1. The main superseded sentences are quoted verbatim under "Correction
 > history" at the end of this file.

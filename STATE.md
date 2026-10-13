@@ -8,10 +8,11 @@ citations, deploy records and a working history that are only useful with the fu
 history in hand. Code comments that cite "PROJECT-STATE item N" refer to it. This page carries
 the conclusions, not the derivation.
 
-_Last written: 2026-10-04, against the live site's public API, the deployed commit and
+_Last written: 2026-10-13, against the live site's public API, the deployed commit and
 `docs/PROJECT-STATE.md`. The v1-vault entry was corrected on 2026-10-08 against the Radix
-Gateway. The usage figures below were re-read on 2026-10-11 (the public health endpoint and the
-NFT collection's supply on the Radix Gateway); nothing else was re-read then._
+Gateway, and updated on 2026-10-13 for the 2026-10-11 decision. The usage figures below were
+re-read on 2026-10-11 (the public health endpoint and the NFT collection's supply on the Radix
+Gateway); nothing else was re-read then._
 
 ## Right now *(as of 2026-10-11)*
 
@@ -61,10 +62,10 @@ NFT collection's supply on the Radix Gateway); nothing else was re-read then._
   roles both resolve to one badge, and the owner rule can never be re-pointed. The key to the
   account holding that badge could not be found from 2026-08-20 until it was located on
   2026-09-17; the operator holds it, and about 505 XRD that account held was moved to another
-  operator-held account on 2026-10-04. The badge and the vault's 160 XRD have not moved, and on
-  2026-10-11 the operator decided not to move them: no recovery is planned. The component still
-  accepts deposits from anyone who calls it directly; the game stopped
-  routing any there on 2026-08-21 and stays off v1 either way. See
+  operator-held account on 2026-10-04. The badge and the vault's 160 XRD have not moved
+  (Gateway read 2026-10-13), and on 2026-10-11 the operator decided not to move them: no
+  recovery is planned. The component still accepts deposits from anyone who calls it directly;
+  the game stopped routing any there on 2026-08-21 and stays off v1 either way. See
   [`docs/VAULT-V1-LOST.md`](docs/VAULT-V1-LOST.md).
 - **The 10 unreachable NFTs.** Their unlock conditions name stats that nothing computes, or a
   dispatcher that does not exist (`docs/GAME-DESIGN-REVIEW.md` §3). Do not read the catalogue

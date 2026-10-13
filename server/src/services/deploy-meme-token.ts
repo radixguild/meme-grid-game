@@ -22,7 +22,8 @@
  * `OwnerRole::Fixed`, but the reason it could not be worked around is that ONE
  * badge went wherever the deploy transaction dropped it, and that account's key
  * then went missing (it was found again 2026-09-17 and is held, so the XRD is
- * recoverable; moving the badge to another operator-held account is planned).
+ * recoverable in principle; the badge and the XRD have not moved, and no recovery is planned
+ * (decided 2026-10-11)).
  *
  * v2 mints TWO owner badges and a separate admin badge precisely so that cold
  * custody, a backup under different key material, and the warm operations key
