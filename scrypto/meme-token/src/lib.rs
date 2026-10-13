@@ -12,8 +12,9 @@ use scrypto::prelude::*;
 /// v1 (`component_rdx1czh262wv…tj6lgxy`) has an IMMUTABLE owner role; its ~160 XRD treasury
 /// can leave only through a proof of its one owner badge. The key to the account holding that
 /// badge was missing from 2026-08-20 until it was found 2026-09-17; it is held now, so the XRD
-/// is recoverable, and moving the badge is planned. Four design choices combined to make an
-/// ordinary key loss into a near-permanent one, each corrected below:
+/// is recoverable in principle; the badge and the XRD have not moved, and no recovery is planned
+/// (decided 2026-10-11). Four design choices combined to make an ordinary key loss into a
+/// near-permanent one, each corrected below:
 ///
 ///   1. `prepare_to_globalize(OwnerRole::Fixed(..))` surfaces on-chain as
 ///      `updater: "None"`. The owner rule could never be re-pointed at a badge we

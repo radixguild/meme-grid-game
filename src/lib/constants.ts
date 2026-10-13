@@ -27,9 +27,10 @@ export const DAPP_DEF = process.env.NEXT_PUBLIC_DAPP_DEF || "";
 // ⛔ The v1 vault `component_rdx1czh262wv…tj6lgxy` is RETIRED and must never be a fallback
 // again. Its owner AND admin roles both require one badge, held in
 // `account_rdx12xgra93…z223v2x`. That account's key is held, so the vault's XRD is
-// recoverable with a proof of the badge; moving the badge to another operator-held account is
-// planned and has not happened. The owner rule's updater is `None`, so the rule itself can
-// never be reassigned: every XRD that reaches the vault can leave only through that one badge.
+// recoverable in principle with a proof of the badge; the badge and the XRD have not moved, and
+// no recovery is planned (decided 2026-10-11). The owner rule's updater is `None`, so the rule
+// itself can never be reassigned: every XRD that reaches the vault can leave only through that
+// one badge.
 //
 // Same treatment as DAPP_DEF above, for the same reason and then some: no hardcoded
 // fallback, so a missing env fails cleanly instead of silently routing player funds into

@@ -7,7 +7,7 @@
     "script keys off 'memeTokenV2' so it can never reuse a dead deployment."
   ],
   "memeTokenV1Dead": {
-    "_note": "PRODUCTION v1 — this is the pair the live game used, and the one holding the stranded XRD. Retired: its owner+admin badge sits in account_rdx12xgra93fqw4u0nmwhlu5rs7f5gvg807rstd54kxwwy2alhxz223v2x, whose key is held, so the vault's XRD is recoverable with a proof of that badge; moving the badge to another operator-held account is planned. See docs/VAULT-V1-LOST.md.",
+    "_note": "PRODUCTION v1 — this is the pair the live game used, and the one holding the stranded XRD. Retired: its owner+admin badge sits in account_rdx12xgra93fqw4u0nmwhlu5rs7f5gvg807rstd54kxwwy2alhxz223v2x, whose key is held, so the vault's XRD is recoverable in principle with a proof of that badge; the badge and the XRD have not moved, and no recovery is planned (decided 2026-10-11). See docs/VAULT-V1-LOST.md.",
     "componentAddress": "component_rdx1czh262wvmm8zpmq4el98v50557f7zu5ge6yp64cqhjecl72tj6lgxy",
     "packageAddress": "package_rdx1ph68jx0h3yattltv9j",
     "ownerBadge": "resource_rdx1t42g9rxmpq7e07mdtzeha49t6fyvyy4ftwwh2qfzymdse2a0qtugls",
