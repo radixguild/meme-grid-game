@@ -1,4 +1,4 @@
-# Vault v1 — owner badge stranded, 160 XRD not yet recovered — post-mortem and tombstone
+# Vault v1 — owner badge stranded, 160 XRD left in place — post-mortem and tombstone
 
 > **Correction, 2026-10-06 (balances re-read from the Radix Gateway on 2026-10-08).** The
 > 2026-08-20 finding that no key controlled `…z223v2x`, the account holding this vault's owner
@@ -6,8 +6,8 @@
 > address and is its sole on-chain controller, and the operator holds it. On 2026-10-04 the
 > operator moved about 505 XRD out of that account to another operator-held account. The account
 > still holds the owner badge (×1) and a small XRD fee reserve, and the vault still holds
-> **160 XRD**. The operator's plan is to move the badge to another operator-held account and
-> withdraw the 160 XRD from there. **Neither step has been taken yet.** What stands: the owner
+> **160 XRD**. On 2026-10-11 the operator decided not to recover it: the badge stays in that
+> account and the 160 XRD stays in the vault. **Neither will be moved.** What stands: the owner
 > rule can never be re-pointed, the two-vault confusion, the design lesson, and the inflow cut —
 > the game stays off v1. The main superseded sentences are quoted verbatim under "Correction
 > history" at the end of this file.
@@ -89,10 +89,10 @@ emergency at any point, but structural and, until the cut below, accumulating.
    three distinct custody accounts are set and none of them is the deploying key, then verifies
    the badge placement on-chain before reporting success. It has not been deployed — see
    `STATE.md`.
-5. **Recovering the vault's 160 XRD — pending.** The operator holds the key to `…z223v2x`, so a
-   transaction signed with it can present the badge today. The plan is to move the badge to
-   another operator-held account and withdraw from there; neither step has been taken.
-   Recovering the XRD does not put v1 back into service — the game stays off it either way.
+5. **Recovering the vault's 160 XRD — not planned (decided 2026-10-11).** The operator holds the
+   key to `…z223v2x`, so a transaction signed with it could present the badge today. The decision
+   is to leave the badge and the XRD where they are. Recovering the XRD would not put v1 back
+   into service either way — the game stays off it.
 
 ## The lesson worth keeping
 

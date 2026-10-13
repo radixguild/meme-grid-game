@@ -52,8 +52,8 @@ One person, `bigdev`, holds all of it:
   holds. That key could not be found from 2026-08-20 until it was located on 2026-09-17. The
   owner rule's updater is `None`, so owner authority over the component moves only with the
   badge; the badge holder can re-point the component's `admin` role to another badge, and nobody
-  else can. The badge has not moved and the vault's 160 XRD has not been withdrawn; the plan is
-  to move the badge to another operator-held account and withdraw from there. The vault's
+  else can. The badge has not moved and the vault's 160 XRD has not been withdrawn; on 2026-10-11
+  the operator decided to leave both where they are, so no recovery is planned. The vault's
   addresses are recorded in `server/deploy-state.json` and the failure is documented in
   [`docs/VAULT-V1-LOST.md`](docs/VAULT-V1-LOST.md).
 - **The v2 vault is not deployed**, so nobody holds authority over it yet. Its deploy script

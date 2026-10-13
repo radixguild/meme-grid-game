@@ -57,13 +57,13 @@ NFT collection's supply on the Radix Gateway); nothing else was re-read then._
   script (`server/src/services/deploy-meme-token.ts`) refuses to run on mainnet unless three
   distinct custody accounts are set — owner cold, owner backup, admin — none of them the
   deploying key. That rule is what the v1 vault failure produced.
-- **The v1 vault is retired, and its 160 XRD has not been recovered yet.** Its owner and admin
+- **The v1 vault is retired, and its 160 XRD stays there by decision.** Its owner and admin
   roles both resolve to one badge, and the owner rule can never be re-pointed. The key to the
   account holding that badge could not be found from 2026-08-20 until it was located on
   2026-09-17; the operator holds it, and about 505 XRD that account held was moved to another
-  operator-held account on 2026-10-04. As of 2026-10-08 the badge and the vault's 160 XRD have
-  not moved; the plan is to move the badge to another operator-held account and withdraw from
-  there. The component still accepts deposits from anyone who calls it directly; the game stopped
+  operator-held account on 2026-10-04. The badge and the vault's 160 XRD have not moved, and on
+  2026-10-11 the operator decided not to move them: no recovery is planned. The component still
+  accepts deposits from anyone who calls it directly; the game stopped
   routing any there on 2026-08-21 and stays off v1 either way. See
   [`docs/VAULT-V1-LOST.md`](docs/VAULT-V1-LOST.md).
 - **The 10 unreachable NFTs.** Their unlock conditions name stats that nothing computes, or a
