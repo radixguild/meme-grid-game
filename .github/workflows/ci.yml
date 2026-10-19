@@ -24,6 +24,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Least privilege: every job here only reads the repository. A job that ever
+# needs more grants it on that job, not here.
+permissions:
+  contents: read
+
 jobs:
   frontend:
     name: Frontend (lint + type-check)
