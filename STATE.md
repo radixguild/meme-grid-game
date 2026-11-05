@@ -8,18 +8,19 @@ citations, deploy records and a working history that are only useful with the fu
 history in hand. Code comments that cite "PROJECT-STATE item N" refer to it. This page carries
 the conclusions, not the derivation.
 
-_Last written: 2026-10-13, against the live site's public API, the deployed commit and
-`docs/PROJECT-STATE.md`. The v1-vault entry was corrected on 2026-10-08 against the Radix
-Gateway, and updated on 2026-10-13 for the 2026-10-11 decision. The usage figures below were
-re-read on 2026-10-11 (the public health endpoint and the NFT collection's supply on the Radix
-Gateway); nothing else was re-read then._
+_Last written: 2026-11-06. Re-read that day: the live site's public health endpoint,
+`GET /api/token/info`, `GET /api/vault/nfts`, the response headers and `/gift`; and, on the
+Radix Gateway (ledger state version 567581462), the NFT collection's supply and the v1-vault
+entry. Everything else stands as written on 2026-10-13 against the live site's public API, the
+deployed commit and `docs/PROJECT-STATE.md`, and was not re-read on 2026-11-06._
 
-## Right now *(as of 2026-10-11)*
+## Right now *(as of 2026-11-06)*
 
 - **Live, and dormant.** The game is deployed at
   [memegrid.radixguild.com](https://memegrid.radixguild.com) and playable. Its public health
-  endpoint reports 36 player rows and 16 boards ever started, the same 16 as on 2026-10-04, so no
-  new board has been started since then; seven NFTs have been minted in total. There is no marketing,
+  endpoint reports 41 player rows and 16 boards ever started, the same 16 as on 2026-10-04, so no
+  new board has been started since then; seven NFTs have been minted in total (the collection's
+  supply on the Radix Gateway is 7, none burned). There is no marketing,
   no community programme and no roadmap being executed. The project is frozen while its next
   phase is decided, and the repository is published as a working reference, not as a launch.
 - **One pseudonymous developer (`bigdev`), working with AI assistance.** No company, no token
@@ -58,14 +59,18 @@ Gateway); nothing else was re-read then._
   script (`server/src/services/deploy-meme-token.ts`) refuses to run on mainnet unless three
   distinct custody accounts are set — owner cold, owner backup, admin — none of them the
   deploying key. That rule is what the v1 vault failure produced.
-- **The v1 vault is retired, and its 160 XRD stays there by decision.** Its owner and admin
+- **The v1 vault is retired, and its 160 XRD was withdrawn on 2026-10-19.** Its owner and admin
   roles both resolve to one badge, and the owner rule can never be re-pointed. The key to the
-  account holding that badge could not be found from 2026-08-20 until it was located on
-  2026-09-17; the operator holds it, and about 505 XRD that account held was moved to another
-  operator-held account on 2026-10-04. The badge and the vault's 160 XRD have not moved
-  (Gateway read 2026-10-13), and on 2026-10-11 the operator decided not to move them: no
-  recovery is planned. The component still accepts deposits from anyone who calls it directly;
-  the game stopped routing any there on 2026-08-21 and stays off v1 either way. See
+  account that held that badge (`…z223v2x`) could not be found from 2026-08-20 until it was
+  located on 2026-09-17; the operator holds it, and about 505 XRD that account held was moved to
+  another operator-held account on 2026-10-04. On 2026-10-19 the badge moved from `…z223v2x` to
+  a different account (transaction
+  `txid_rdx1ncfw8mgskr5xd4rfwahs4rdau6c035kwm4em4vnl3hy5gh5w6qdscu3rxk`), and about ten minutes
+  later the vault's 160 XRD was withdrawn to that same account
+  (`txid_rdx1g4rjeg90szl4r3epev3gqdg0qlrj54s2kv42rn6ltg6rg03ajwgqgjxsz6`). A Gateway read on
+  2026-11-06 shows the vault holding 0 XRD, not paused, with its owner and admin roles still
+  requiring that badge. The component still accepts deposits from anyone who calls it directly;
+  the game stopped routing any there on 2026-08-21 and stays off v1. See
   [`docs/VAULT-V1-LOST.md`](docs/VAULT-V1-LOST.md).
 - **The 10 unreachable NFTs.** Their unlock conditions name stats that nothing computes, or a
   dispatcher that does not exist (`docs/GAME-DESIGN-REVIEW.md` §3). Do not read the catalogue
