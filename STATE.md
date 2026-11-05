@@ -81,8 +81,12 @@ deployed commit and `docs/PROJECT-STATE.md`, and was not re-read on 2026-11-06._
   (`docs/GAME-MODEL-STRATEGY.md`). The feed that would credit Guild activity is designed, not
   built; nothing in this repository reads Guild data. The game has its own dApp definition, its
   own on-chain entities and its own signing key.
-- **A Content-Security-Policy on the Next.js app.** The API sends one; the app needs a
-  report-only sweep of the wallet-connect flow first.
+- **An enforcing Content-Security-Policy on the Next.js app.** The API sends one. In this
+  repository `next.config.ts` sends the app's policy as `Content-Security-Policy-Report-Only`,
+  pinned by `src/__tests__/security-headers.test.ts`; a local sweep on 2026-11-06 (production
+  build, home page and the opened Connect popover) logged no violations. The live site did not
+  send that header on 2026-11-06 and its `/api/csp-report` answered 404, so the deployed build
+  is older than this repository's; which commit it runs was not re-read.
 - **The gift rails** (`/gift`). No destination is configured, so the page is a 404 by design.
 
 ## Disclosures
