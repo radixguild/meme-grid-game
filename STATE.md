@@ -8,7 +8,7 @@ citations, deploy records and a working history that are only useful with the fu
 history in hand. Code comments that cite "PROJECT-STATE item N" refer to it. This page carries
 the conclusions, not the derivation.
 
-_Last written: 2026-11-06. Re-read that day: the live site's public health endpoint,
+_Last written: 2026-11-07. Re-read on 2026-11-06: the deployed commit, the live site's public health endpoint,
 `GET /api/token/info`, `GET /api/vault/nfts`, the response headers and `/gift`; and, on the
 Radix Gateway (ledger state version 567581462), the NFT collection's supply and the v1-vault
 entry. Everything else stands as written on 2026-10-13 against the live site's public API, the
@@ -16,6 +16,12 @@ deployed commit and `docs/PROJECT-STATE.md`, and was not re-read on 2026-11-06._
 
 ## Right now *(as of 2026-11-06)*
 
+- **Deployed build.** Commit `e445b4008fc88a4da5e07644b0e42de124a22ba6` of this repository was
+  deployed to the live site on 2026-11-06 (server restarted at 23:51 UTC). The deploy directory
+  is now a checkout of this public repository; before that it was a private history repository
+  with a local patch. Read back on 2026-11-06 after the restart: the public health endpoint
+  reported 41 player rows and 16 boards, and both processes were online. This describes that
+  day; it is not re-read automatically.
 - **Live, and dormant.** The game is deployed at
   [memegrid.radixguild.com](https://memegrid.radixguild.com) and playable. Its public health
   endpoint reports 41 player rows and 16 boards ever started, the same 16 as on 2026-10-04, so no
@@ -81,12 +87,12 @@ deployed commit and `docs/PROJECT-STATE.md`, and was not re-read on 2026-11-06._
   (`docs/GAME-MODEL-STRATEGY.md`). The feed that would credit Guild activity is designed, not
   built; nothing in this repository reads Guild data. The game has its own dApp definition, its
   own on-chain entities and its own signing key.
-- **An enforcing Content-Security-Policy on the Next.js app.** The API sends one. In this
-  repository `next.config.ts` sends the app's policy as `Content-Security-Policy-Report-Only`,
-  pinned by `src/__tests__/security-headers.test.ts`; a local sweep on 2026-11-06 (production
-  build, home page and the opened Connect popover) logged no violations. The live site did not
-  send that header on 2026-11-06 and its `/api/csp-report` answered 404, so the deployed build
-  is older than this repository's; which commit it runs was not re-read.
+- **An enforcing Content-Security-Policy on the Next.js app.** The API sends one. The app's
+  policy is sent as `Content-Security-Policy-Report-Only`, pinned by
+  `src/__tests__/security-headers.test.ts`, and is live in report-only mode since the deploy
+  above (read back on 2026-11-06: the public `/` answered 200 with that header, and
+  `POST /api/csp-report` answered 204). A local sweep on 2026-11-06 (production build, home page
+  and the opened Connect popover) logged no violations. Enforcing mode has not been turned on.
 - **The gift rails** (`/gift`). No destination is configured, so the page is a 404 by design.
 
 ## Disclosures
