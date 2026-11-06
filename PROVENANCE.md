@@ -48,12 +48,13 @@ One person, `bigdev`, holds all of it:
   badge sits in a cold account the operator controls. What each badge authorises is chain fact,
   not description: read `scrypto/meme-nfts/src/lib.rs` and the resource's role assignments from
   the Radix Gateway.
-- **The v1 purchase vault's owner and admin badge** sits in an account whose key the operator
-  holds. That key could not be found from 2026-08-20 until it was located on 2026-09-17. The
-  owner rule's updater is `None`, so owner authority over the component moves only with the
-  badge; the badge holder can re-point the component's `admin` role to another badge, and nobody
-  else can. The badge has not moved and the vault's 160 XRD has not been withdrawn; on 2026-10-11
-  the operator decided to leave both where they are, so no recovery is planned. The vault's
+- **The v1 purchase vault's owner and admin badge** sat until 2026-10-19 in an account whose key
+  the operator holds. That key could not be found from 2026-08-20 until it was located on
+  2026-09-17. The owner rule's updater is `None`, so owner authority over the component moves
+  only with the badge; the badge holder can re-point the component's `admin` role to another
+  badge, and nobody else can. On 2026-10-19 the badge moved to a different account and the
+  vault's 160 XRD was withdrawn to that account (Radix Gateway read 2026-11-06; transactions in
+  [`docs/VAULT-V1-LOST.md`](docs/VAULT-V1-LOST.md)). The vault's
   addresses are recorded in `server/deploy-state.json` and the failure is documented in
   [`docs/VAULT-V1-LOST.md`](docs/VAULT-V1-LOST.md).
 - **The v2 vault is not deployed**, so nobody holds authority over it yet. Its deploy script

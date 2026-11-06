@@ -86,9 +86,9 @@ a rule whose updater is `None`, so the rule can never be re-pointed. When that w
 2026-08-20, the key to the account holding the badge could not be found either, so the vault —
 which still accepts deposits — could be neither paused nor withdrawn from. Inflow was stopped on
 2026-08-21. The key was located on 2026-09-17, and about 505 XRD that account held was moved to
-another operator-held account on 2026-10-04. The vault's own 160 XRD has **not been withdrawn**,
-and on 2026-10-11 the operator decided to leave it there: the badge stays where it is and no
-recovery is planned.
+another operator-held account on 2026-10-04. On 2026-10-19 the badge moved to a different
+account and the vault's 160 XRD was withdrawn to that account; a Radix Gateway read on
+2026-11-06 shows the vault holding 0 XRD.
 The addresses are recorded as tombstones in `server/deploy-state.json`, and the v2 blueprint in
 `scrypto/meme-token` carries the fix: a recoverable owner role, and a deploy script that refuses
 to run without three distinct custody accounts. The v2 vault is **not deployed**, so buying ROLLS
