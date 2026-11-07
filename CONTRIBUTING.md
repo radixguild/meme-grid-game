@@ -9,7 +9,7 @@
   a maintainer reviews and squash-merges.
 - **One maintainer.** `bigdev` is the sole reviewer and merger today. See
   [`PROVENANCE.md`](./PROVENANCE.md) for who holds the on-chain authority behind that.
-- **No review SLA.** This is a solo, self-funded and currently dormant project. A PR may sit
+- **No review SLA.** This is a solo, self-funded, part-time project. A PR may sit
   for a while. That is a signal about one person's calendar, not about the idea.
 - **This is the working repository.** The private predecessor this code was exported from is
   kept as an archive that resolves old commit citations (`PROVENANCE.md`); new work lands here.

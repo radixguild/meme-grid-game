@@ -7,8 +7,8 @@ companion to the [Radix Guild](https://radixguild.com). Apache-2.0.
 
 > **Read [`STATE.md`](./STATE.md) first.** It says what is live, what is switched off and what is
 > disclosed as a known limit, and it wins over this file wherever the two disagree. The short
-> version: the game is live and playable, the paid economy is off, and the project is dormant
-> while its next phase is decided.
+> version: the game is live and playable, the paid economy is off, and the project is
+> maintained, with the v2 vault deploy as the next step.
 
 ## What it is
 

@@ -22,13 +22,13 @@ deployed commit and `docs/PROJECT-STATE.md`, and was not re-read on 2026-11-06._
   with a local patch. Read back on 2026-11-06 after the restart: the public health endpoint
   reported 41 player rows and 16 boards, and both processes were online. This describes that
   day; it is not re-read automatically.
-- **Live, and dormant.** The game is deployed at
+- **Live and maintained; feature work resumed 2026-11-07.** The game is deployed at
   [memegrid.radixguild.com](https://memegrid.radixguild.com) and playable. Its public health
   endpoint reports 41 player rows and 16 boards ever started, the same 16 as on 2026-10-04, so no
   new board has been started since then; seven NFTs have been minted in total (the collection's
-  supply on the Radix Gateway is 7, none burned). There is no marketing,
-  no community programme and no roadmap being executed. The project is frozen while its next
-  phase is decided, and the repository is published as a working reference, not as a launch.
+  supply on the Radix Gateway is 7, none burned). There is no marketing and no community
+  programme yet. Next: the v2 vault and prize vault deploy, an operator sitting not yet
+  scheduled. The repository is published as a working reference of what can be built on Radix.
 - **One pseudonymous developer (`bigdev`), working with AI assistance.** No company, no token
   sale, no treasury beyond the accounts named in [`PROVENANCE.md`](./PROVENANCE.md).
   Independent of, and not backed, endorsed or affiliated with, the Radix Foundation or RDX Works.
@@ -70,13 +70,13 @@ deployed commit and `docs/PROJECT-STATE.md`, and was not re-read on 2026-11-06._
   account that held that badge (`…z223v2x`) could not be found from 2026-08-20 until it was
   located on 2026-09-17; the operator holds it, and about 505 XRD that account held was moved to
   another operator-held account on 2026-10-04. On 2026-10-19 the badge moved from `…z223v2x` to
-  a different account (transaction
+  another operator-held account (transaction
   `txid_rdx1ncfw8mgskr5xd4rfwahs4rdau6c035kwm4em4vnl3hy5gh5w6qdscu3rxk`), and about ten minutes
-  later the vault's 160 XRD was withdrawn to that same account
+  later the vault's 160 XRD was withdrawn to that account
   (`txid_rdx1g4rjeg90szl4r3epev3gqdg0qlrj54s2kv42rn6ltg6rg03ajwgqgjxsz6`). A Gateway read on
   2026-11-06 shows the vault holding 0 XRD, not paused, with its owner and admin roles still
   requiring that badge. The component still accepts deposits from anyone who calls it directly;
-  the game stopped routing any there on 2026-08-21 and stays off v1. See
+  the game stopped routing any there on 2026-08-21 and has not routed purchases to v1 since. See
   [`docs/VAULT-V1-LOST.md`](docs/VAULT-V1-LOST.md).
 - **The 10 unreachable NFTs.** Their unlock conditions name stats that nothing computes, or a
   dispatcher that does not exist (`docs/GAME-DESIGN-REVIEW.md` §3). Do not read the catalogue

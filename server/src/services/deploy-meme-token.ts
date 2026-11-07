@@ -22,8 +22,9 @@
  * `OwnerRole::Fixed`, but the reason it could not be worked around is that ONE
  * badge went wherever the deploy transaction dropped it, and that account's key
  * then went missing (it was found again 2026-09-17 and is held, so the XRD is
- * recoverable in principle; the badge and the XRD have not moved, and no recovery is planned
- * (decided 2026-10-11)).
+ * recoverable in principle). On 2026-10-19 the badge moved to another operator-held account and
+ * the vault's 160 XRD was withdrawn to it (docs/VAULT-V1-LOST.md). The v2 blueprint is built;
+ * running this script on mainnet is an operator sitting that is still pending (STATE.md).
  *
  * v2 mints TWO owner badges and a separate admin badge precisely so that cold
  * custody, a backup under different key material, and the warm operations key
