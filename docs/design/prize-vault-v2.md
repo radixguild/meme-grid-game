@@ -27,7 +27,7 @@ and its limit (§3.1, §3.8).
 - Reuse of an account as the "vault" was considered and rejected: the owner can bypass deposit rules
   (§2.3).
 - Awards by the hot server key are **ruled out for v1** (R5, 7 Nov): awards are signed by the admin or an owner badge.
-- The owner ruled R1 to R9 on 7 Nov; two new yes/no rulings (R10, R11) follow from R6 (§5). Estimated build: roughly 28 to 38 lane-hours,
+- The owner ruled R1 to R9 on 7 Nov; two new yes/no rulings (R10, R11) follow from R6 (§5). Estimated build: roughly 26 to 36 lane-hours,
   **ESTIMATE** (§4).
 
 ## 1. What the v2 deploy creates, and where each badge lives
@@ -68,6 +68,11 @@ From `enable_method_auth!` in `lib.rs`:
 each with `try_deposit_or_abort`, then `verifyCustody` reads the ledger and requires the deployer to
 hold none. `resolveCustody` on mainnet refuses to run unless three env names are set, are valid
 account addresses, are pairwise distinct, and none is the deploying account.
+
+**Fallback caveat.** If the operator's sheet falls back to one account serving as both cold and backup
+(its branch for when the second seed cannot be opened), that configuration **fails** `resolveCustody`'s
+three-distinct-accounts rule and the deploy refuses to run. In that branch the owner must name a
+third account. This is an open item on the sheet, not something this design can resolve.
 
 | Badge | Env name | Quantity | Role in the operator's private mapping (ruled 7 Nov 2026) |
 |---|---|---|---|
@@ -203,8 +208,11 @@ their precise response shape for the new blueprint is **UNKNOWN** until a stoken
   that lets third parties verify package WASM and RPD "are indeed compiled from a specific source
   code" (<https://docs.radixdlt.com/docs/scrypto-builder>). Latest tag seen: v1.3.1
   (<https://hub.docker.com/r/radixdlt/scrypto-builder/tags>).
-- Comparing that build's hash with `code_hash_hex` from `/state/package/page/codes` is **INFERRED**;
-  the page does not mention hashes. A community repo reports that a deployed WASM can differ from a
+- **The hash function behind `code_hash_hex` is UNVERIFIED.** It may be Blake2b-256 rather than
+  SHA-256 (not confirmed from a cited source). So this design does **not** claim `code_hash_hex`
+  equals the SHA-256 of the WASM. Comparing hashes of the same function, or comparing `code_hex`
+  bytes read from `/state/package/page/codes` with the CI artifact bytes, is a **stokenet check**
+  (§4 steps 6 and 7), not an established method. The page does not mention hashes. A community repo reports that a deployed WASM can differ from a
   local build (<https://github.com/just-lock/locker>). No official source-verification service was
   found (**NOT FOUND**).
 - This repo's CI already builds the WASM and RPD on Linux and uploads them as run artifacts
@@ -245,13 +253,19 @@ their precise response shape for the new blueprint is **UNKNOWN** until a stoken
    in this repo today (all four are `new_fungible`), and any future one must be added to `forbidden`
    in the same change that creates it.
 
+**Does R6 weaken the claim?** Yes, and the doc now says so: the claim was "holds only allowlisted
+resources" and is now "no unlisted fungible, nothing on `forbidden`", so unlisted non-fungibles can
+be held. A third-party resource that is itself a badge is handled as follows: a fungible one is
+rejected by the allowlist rule; a non-fungible one is accepted, held, and returned by OWNER
+`withdraw_prize` on request (§3.6).
+
 ### 3.2 Component surface (proposed; nothing is implemented)
 
 State (names are proposals):
 
 | Field | Type | Notes |
 |---|---|---|
-| `allowed` | `IndexSet<ResourceAddress>` or `KeyValueStore<ResourceAddress, ()>` | small set; choice is an implementation detail, SPECULATIVE until the test run shows cost |
+| `allowed` | `IndexSet<ResourceAddress>` | **chosen**: a handful of entries, stored in component state so one entity read returns it. A `KeyValueStore` is not used, so no key-value-store read is needed |
 | `vaults` | `KeyValueStore<ResourceAddress, Vault>` | one vault per allowed resource, created on first deposit |
 | `forbidden` | `IndexSet<ResourceAddress>` | the custody badges known at instantiate (§3.4). Backstop, not the claim |
 | `paused` | `bool` | |
@@ -328,8 +342,7 @@ the claim in §3.1(6) rests on the unlisted-fungible rule plus this list, and a 
 R5 is ruled **no**: there is no `awarder` badge and no server-driven award in v1. Awards are signed by the admin (capped) or an owner. For reference, the only automated actor in the repo today is the hot signer (`BOT_PRIVATE_KEY`). Giving it an
 `awarder` badge turns "server key compromised" from "the prize treasury is the hot account and the
 minter badge shares it" (today) into "prizes up to the cap per window". The cap numbers are UNKNOWN
-(UNKNOWN, no longer needed). The component ships without `awarder`, which removes the hot-key
-exposure at the cost of operator hands per award, consistent with "no on-chain draw or raffle path exists" in `STATE.md`.
+(UNKNOWN, no longer needed). The component ships without `awarder`, which removes the hot key's **prize-award** exposure (the hot account still holds the NFT collection's minter badge, §1.4) at the cost of operator hands per award, consistent with "no on-chain draw or raffle path exists" in `STATE.md`.
 
 ### 3.6 Failure modes
 
@@ -339,7 +352,7 @@ exposure at the cost of operator hands per award, consistent with "no on-chain d
 | Allowlist wrong (missing entry) | deposits of that resource abort | none needed; `allow_resource` | none: fails closed |
 | A gifted third-party NFT is itself someone's authority badge | that party's authority sits in our vault; a role rule elsewhere may then be unsatisfiable until OWNER withdraws it | harm is to the donor's own rules, not ours; OWNER `withdraw_prize` can return it | **UNKNOWN** how often; nothing on-ledger identifies it (§2.1) |
 | Spam, offensive or malicious third-party NFTs | vault fills with junk; public pool display renders attacker-chosen name and icon | OWNER can `disallow_resource` and withdraw; R11 limits what the public page renders | storage cost to the vault is UNKNOWN until stokenet |
-| A tier-1 resource is used as a badge by something | a prize deposit could put authority inside the vault | the two tier-1 resources are ours; their roles are in this repo: ROLLS roles use `global_caller(component)`; the NFT collection's minter/burner use `global_caller` / `deny_all`; no role rule we wrote requires either | none known |
+| A tier-1 resource is used as a badge by something | a prize deposit could put authority inside the vault | the two tier-1 resources are ours; their roles are in this repo: ROLLS roles use `global_caller(component)`; the NFT collection's minter/burner use `global_caller` / `deny_all` **in the current `scrypto/meme-nfts/src/lib.rs` source; the live collection was deployed from older v1-style rules (that file's comments, about lines 155-175) that gate minting on badge presence**. In both versions no role rule we wrote requires the collection resource or ROLLS, so the conclusion holds, but it is read from source, not from the deployed collection | none known |
 | ROLLS paid out as a prize is later burned via the game vault | normal path | ROLLS burn is component-gated, unaffected | none |
 | `award_prize` abused by a compromised `admin` key | caps limit loss | per-call cap; OWNER pauses (admin could re-unpause) and rotates the admin rule | cap sizing UNKNOWN |
 | Owner badge lost (one of two) | other still works | two owner accounts, `Updatable` rule: rotate | both lost = stuck, same as any `Updatable` owner role |
@@ -352,16 +365,22 @@ exposure at the cost of operator hands per award, consistent with "no on-chain d
 All pinned to one `state_version` and recorded with that number. What the Gateway can show is in
 §2.5; what it cannot show is in §3.8.
 
-1. **Code**: package address of the component; code hash from the package's code listing equals the
-   hash of the CI-built WASM artifact for the pinned commit (§4 step 6). Proves "this code".
-2. **State**: component state fields include the allowlist (exactly the two tier-1 addresses) and
-   the `forbidden` set.
-3. **Roles**: owner rule `Updatable`, requiring the owner badge; `admin` rule requires the admin
-   badge; method auth matches §3.2 (no method with `PUBLIC` that moves value out).
-4. **Holdings**: every fungible vault's resource ∈ allowlist; every non-fungible vault's resource ∉
+1. **Code** (UNKNOWN until the stokenet run, §2.6): `/state/package/page/codes` for the component's
+   package returns `code_hash_hex` and `code_hex`. The compare against the CI artifact (built from the
+   pinned commit) uses either the same hash function, once identified, or the raw bytes. The CI
+   `SHA256SUMS` stays what it is: the attestation "these files were built from commit X", not an
+   on-ledger proof.
+2. **State**: `/state/entity/details` for the component returns its state fields; `allowed` and
+   `forbidden` are `IndexSet`s inside it. Expected: `allowed` is exactly the two tier-1 addresses.
+   The field shape in the response is **UNKNOWN** until stokenet.
+3. **Roles**: `/state/entity/details` for the component (role assignments: owner rule `Updatable`
+   requiring the owner badge, `admin` requiring the admin badge) plus `/state/package/page/blueprints`
+   for the blueprint definition (method to role mapping). Both response shapes are **UNKNOWN** until
+   stokenet (§2.5); until then this read-back is a plan, not an established proof.
+4. **Holdings** (`/state/entity/details` with `aggregation_level` `Vault`, plus `/state/entity/page/non-fungible-vaults` for NFT ids): every fungible vault's resource ∈ allowlist; every non-fungible vault's resource ∉
    `forbidden`; and explicit zero-balance reads for each known custody badge address (v2 owner, v2
    admin, NFT owner, NFT minter, v1 badge).
-5. **Custody**: owner×2 / admin×1 sit in three distinct accounts, deployer holds none
+5. **Custody** (`/state/entity/details` on the three accounts, pinned to the same `state_version`): owner×2 / admin×1 sit in three distinct accounts, deployer holds none
    (the existing `verifyCustody` shape).
 6. **Optional negative proof** (OWNER OK needed, ruling R8): a transaction **preview** (dry run,
    nothing submitted) that tries to `deposit_prize` an owner badge from an account holding one; the
@@ -401,13 +420,13 @@ backs them. One lane = one agent session in its own worktree. Nothing starts bef
 | 2 | Blueprint `scrypto/prize-vault` per §3.2, events, `forbidden` set, doc comments in the repo's style | blueprint, `cargo check` green | 4 to 6 |
 | 3 | Ledger tests (list below) | tests in `scrypto/prize-vault/tests` | 5 to 7 |
 | 4 | Server: `deploy-prize-vault.ts` mirroring the v2 custody rules (three distinct accounts, deployer holds none, read-back); allowlist mirror boot check; manifest builders that call `assertAllowedPrizeResources`; no award route unless R5 is yes | server code and tests | 6 to 8 |
-| 5 | Docs and public copy: `STATE.md`, `PROVENANCE.md`, the tokenomics "gift an NFT" section (R7, R10), `.env.example` | docs | 2 to 3 |
-| 6 | Reproducible artifact: CI wasm+rpd for the pinned commit, `sha256` recorded, compared with a `scrypto-builder` build and, after deploy, with `code_hash_hex` | recorded hashes | 2 to 3 (shares the ruling-6 "CI-artifact" PR with the v2 vault) |
+| 5 | Docs and public copy: `STATE.md`, `PROVENANCE.md`, the tokenomics "gift an NFT" section (R7a, R7b, R10), `.env.example` | docs | 2 to 3 |
+| 6 | Reproducible artifact: CI wasm+rpd for the pinned commit, `SHA256SUMS` recorded as the built-from-commit attestation, compared with a `scrypto-builder` build and, after deploy, with the on-ledger code as read in §3.7(1) (method UNKNOWN until stokenet) | recorded hashes | 2 to 3 (shares the ruling-6 "CI-artifact" PR with the v2 vault) |
 | 7 | Stokenet rehearsal, three distinct test accounts, including the negative deposit | transcript | 2 to 3 plus owner time |
 | 8 | Tier A review in a separate session | `agent/reviewed` | 3 to 4 |
 | 9 | Owner sitting (fence names below) | read-backs recorded | owner |
 
-Total about 28 to 38 lane-h, **ESTIMATE**. It could move if step 1 finds a surprise.
+Total about 26 to 36 lane-h (sum of rows 1 to 8), **ESTIMATE**. It could move if step 1 finds a surprise.
 
 ### 4.1 Test list (ledger tests, written at step 3)
 
@@ -448,10 +467,11 @@ NFT gifts), which raises R10 and R11; both are still open.
 | R4 | `deposit_prize` PUBLIC? | Yes | **Yes** |
 | R5 | Automated `awarder` badge in the hot server key? | No for v1 | **No** (as recommended) |
 | R6 | Restrict to the two allowlisted resources, third-party NFTs out of scope? | Yes | **Reversed: allow third-party NFT deposits** ("why restrict?"). Recorded as tiers in §3.1(5) |
-| R7 | Retire the public "gift an NFT" copy and the hot account as published treasury? | Yes | **"See 6"**, read as: gifting stays open. Whether the donation target moves to the vault is R10 |
+| R7a | Retire the public "gift an NFT" copy? | Yes | **"See 6"**, read as **No**: gifting stays open (reading, to confirm) |
+| R7b | Stop publishing the hot account as the pool treasury address? | Yes | **open**, tied to R10 |
 | R8 | Mainnet preview negative test acceptable? | Yes | **Yes** |
 | R9 | Prize vault deploys in a later sitting than the v2 vault? | Yes | **Yes** |
-| R10 | Donation target moves from the hot account to the vault's app gift flow, copy says "NFTs only"? | Yes | **open** |
+| R10 | The gift copy points at the vault's app gift flow and says "NFTs only"? | Yes | **open** |
 | R11 | Public pool page shows third-party NFTs by count only (no attacker-chosen name or icon rendered) until the owner reviews a resource? | Yes | **open** |
 
 ## 6. Not decided here
