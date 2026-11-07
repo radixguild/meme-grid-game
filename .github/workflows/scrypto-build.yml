@@ -94,15 +94,22 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p artifacts
-          for f in build/meme_token.wasm build/meme_token.rpd build/meme_nfts.wasm build/meme_nfts.rpd; do
-            test -s "$f" || { echo "missing or empty: $f"; ls -laR build; exit 1; }
-            cp "$f" artifacts/
+          # Output location differs between a package and a workspace build, so
+          # find it rather than assume it; the listing goes in the log.
+          find . -path ./artifacts -prune -o \( -name '*.wasm' -o -name '*.rpd' \) -path '*release*' -print | sort
+          for n in meme_token meme_nfts; do
+            for ext in wasm rpd; do
+              src=$(find . -path ./artifacts -prune -o -path '*release*' -name "$n.$ext" -not -path '*/deps/*' -print | head -n1)
+              test -n "$src" && test -s "$src" || { echo "missing or empty: $n.$ext"; exit 1; }
+              echo "$n.$ext <- $src"
+              cp "$src" artifacts/
+            done
           done
           cd artifacts
           sha256sum meme_token.wasm meme_token.rpd meme_nfts.wasm meme_nfts.rpd | tee SHA256SUMS
           sha256sum --check SHA256SUMS
           ls -la
-          echo "commit ${GITHUB_SHA}" 
+          echo "commit ${GITHUB_SHA}"
 
       - name: Upload artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
