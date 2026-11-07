@@ -68,6 +68,21 @@ the comments there and in `.github/workflows/ci.yml` record why.
 All four are required on `main`. The workflows are `.github/workflows/ci.yml` and
 `.github/workflows/secret-scan.yml`; their comments say why each step is shaped the way it is.
 
+### Fetching the Scrypto build (wasm + rpd + checksums)
+
+`.github/workflows/scrypto-build.yml` builds `scrypto/meme-token` and `scrypto/meme-nfts` with the
+pinned `scrypto` CLI (`radix-clis` 1.3.1, compiler 1.92.0 from `scrypto/rust-toolchain.toml`) and
+uploads one artifact, `scrypto-build-<full commit sha>`, holding the `.wasm` and `.rpd` files and a
+`SHA256SUMS` file. It runs on `workflow_dispatch` and on pushes that touch `scrypto/`; artifacts
+are kept 30 days. It builds only: nothing is deployed.
+
+To fetch it, list the runs with `gh run list -R radixguild/meme-grid-game -w scrypto-build.yml`,
+pick the successful run for the commit you intend to deploy, and run
+`gh run download` with that run's id, `-R radixguild/meme-grid-game` and `-n` set to the artifact
+name above, into an empty directory. Verify with `sha256sum --check SHA256SUMS` in that directory,
+and compare the sums with the ones printed in the run's log. The run page shows the commit; it must
+be the commit you mean to deploy.
+
 ## Reporting a security issue
 
 Do not open a public issue for anything that could move XRD, mint or duplicate an NFT, forge a
