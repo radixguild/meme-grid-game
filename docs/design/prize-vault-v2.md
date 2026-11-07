@@ -15,15 +15,19 @@ and its limit (§3.1, §3.8).
 ## 0. Summary
 
 - Build a separate `PrizeVault` component whose every bucket-accepting method asserts the resource
-  is in an on-ledger allowlist. A component has no account-style receive path (INFERRED, §2.2), so
-  nothing else can enter.
+  is acceptable under an on-ledger rule: allowlisted (our two resources) or an open-gift
+  non-fungible not on a `forbidden` list (owner ruling R6, 7 Nov). A component has no account-style
+  receive path (INFERRED, §2.2), so nothing else can enter.
 - "Cannot hold badges" cannot be enforced by classification: no on-ledger badge flag was found
-  (§2.1). The enforceable claim is "holds only allowlisted resources", with a v1 allowlist of exactly
-  two resources we created and reviewed.
+  (§2.1). The enforceable claim is: **no fungible resource other than allowlisted ones, and no
+  resource on the `forbidden` list.** Every custody badge in this repo is fungible (owner, admin,
+  collection owner, collection minter), so refusing unlisted fungibles keeps them out structurally;
+  `forbidden` is the backstop. Third-party NFTs are accepted by owner ruling, so the vault can hold
+  arbitrary third-party non-fungibles: that is a stated residual, not a bug (§3.6).
 - Reuse of an account as the "vault" was considered and rejected: the owner can bypass deposit rules
   (§2.3).
-- Awards by the hot server key are **not** recommended for v1; admin/owner-signed awards are.
-- Nine yes/no rulings are owed before any build (§5). Estimated build: roughly 28 to 38 lane-hours,
+- Awards by the hot server key are **ruled out for v1** (R5, 7 Nov): awards are signed by the admin or an owner badge.
+- The owner ruled R1 to R9 on 7 Nov; two new yes/no rulings (R10, R11) follow from R6 (§5). Estimated build: roughly 28 to 38 lane-hours,
   **ESTIMATE** (§4).
 
 ## 1. What the v2 deploy creates, and where each badge lives
@@ -223,20 +227,23 @@ their precise response shape for the new blueprint is **UNKNOWN** until a stoken
 1. **A separate package and component, `PrizeVault`.** Not a new method on `MemeGameVault`: that
    blueprint holds the XRD treasury and mints ROLLS, and prize logic would widen the surface of a
    component that custodies money. Separate component = separate custody story, separate pause.
-2. **Enforcement lives in the component, on the ledger.** The allowlist is component state checked
-   inside every method that accepts a bucket. A server env var cannot make a ledger entity refuse
+2. **Enforcement lives in the component, on the ledger.** The acceptance rule (§3.2) is component
+   code and state checked inside every method that accepts a bucket. A server env var cannot make a ledger entity refuse
    anything.
 3. **`NFT_PRIZE_RESOURCE_ALLOWLIST` stays, but demoted to a server-side mirror**: a display filter
    and a boot/CI check that it is a subset of the on-ledger allowlist. It is never the enforcement.
 4. **Allowlist is append-only by OWNER, plus owner `disallow`** (stops new deposits and awards of
    that resource; never traps what is already inside, see `withdraw_prize`).
-5. **v1 allowlist = exactly two entries: the v2 ROLLS resource and the achievement NFT
-   collection** (ruling 5 of the sitting sheet). Anything else, including community-gifted NFTs,
-   is out of scope until a resource-by-resource review (§3.6).
+5. **Two acceptance tiers (R6, ruled 7 Nov).** Tier 1, the allowlist: the v2 ROLLS resource and the
+   achievement NFT collection (ruling 5 of the sitting sheet), any kind. Tier 2, open gifts: **any
+   non-fungible resource not on `forbidden`**, so community members can gift third-party NFTs. No
+   third-party fungible is accepted unless OWNER adds it to the allowlist.
 6. **The component never calls itself "badge-proof" on classification.** No on-ledger property marks a
-   resource as a badge (§2.1). The claim is "holds only resources in the allowlist; the allowlist
-   contains only resources we reviewed and that no role rule we own references." That is weaker than
-   "cannot hold badges" in the abstract and it is the claim the code can back.
+   resource as a badge (§2.1). The claim is "holds no unlisted fungible and nothing on `forbidden`".
+   That is weaker than "cannot hold badges" in the abstract and it is the claim the code can back.
+   A non-fungible *custody* badge would pass the tier-2 rule unless it is on `forbidden`; none exists
+   in this repo today (all four are `new_fungible`), and any future one must be added to `forbidden`
+   in the same change that creates it.
 
 ### 3.2 Component surface (proposed; nothing is implemented)
 
@@ -248,14 +255,14 @@ State (names are proposals):
 | `vaults` | `KeyValueStore<ResourceAddress, Vault>` | one vault per allowed resource, created on first deposit |
 | `forbidden` | `IndexSet<ResourceAddress>` | the custody badges known at instantiate (§3.4). Backstop, not the claim |
 | `paused` | `bool` | |
-| `owner_badge_address`, `admin_badge_address`, `awarder_badge_address` (if ruled) | `ResourceAddress` | recorded for read-back, mirroring `get_badges` on `MemeGameVault` |
+| `owner_badge_address`, `admin_badge_address` | `ResourceAddress` | recorded for read-back, mirroring `get_badges` on `MemeGameVault` |
 
 Methods:
 
 | Method | Auth (proposed) | Behaviour |
 |---|---|---|
-| `deposit_prize(bucket)` | PUBLIC (ruling R4) | assert not paused; assert resource in `allowed`; `put` into that resource's vault; emit `PrizeDepositedEvent`. Anything else aborts the transaction, so the bucket never lands. |
-| `award_prize(resource, amount_or_ids) -> Bucket` | `awarder` or OWNER (ruling R5) | assert not paused and resource allowed; take from vault; emit `PrizeAwardedEvent`; **optional per-call and per-window caps** (values UNKNOWN, ruling needed) |
+| `deposit_prize(bucket)` | PUBLIC (R4) | assert not paused; assert resource not in `forbidden` and (in `allowed` **or** non-fungible: checked from the resource address type, **INFERRED** feasible, confirmed in build step 1); `put` into that resource's vault; emit `PrizeDepositedEvent`. Anything else aborts the transaction, so the bucket never lands. |
+| `award_prize(resource, amount_or_ids) -> Bucket` | `admin` or OWNER (R5: no automated awarder) | assert not paused; resource accepted under the same rule; take from vault; emit `PrizeAwardedEvent`; **per-call cap for `admin` (value UNKNOWN, ruling needed)**; OWNER uncapped |
 | `withdraw_prize(resource, amount_or_ids) -> Bucket` | OWNER only | recovery and wind-down path; works while paused and for disallowed resources; emits `PrizeWithdrawnEvent` |
 | `allow_resource(addr)` | OWNER only | aborts if `addr` is in `forbidden`, is XRD, or is one of the vault's own badge addresses; emits `AllowlistChangedEvent` |
 | `disallow_resource(addr)` | OWNER only | blocks new deposits/awards of `addr`; holdings stay and stay withdrawable by OWNER |
@@ -295,8 +302,8 @@ sheet and stay out of this repository).
 | Authority | Badge | Held by (role) | Can |
 |---|---|---|---|
 | OWNER | owner badge ×2 | cold + backup (distinct accounts) | `allow_resource`, `disallow_resource`, `withdraw_prize`, rotate owner/admin rules, `set_paused` |
-| `admin` | admin badge | warm ops account | `set_paused` only. **Cannot** award, withdraw, or change the allowlist |
-| `awarder` (only if ruled yes, R5) | new badge | the hot server signer | `award_prize` within caps. A compromised server key can drain prizes up to the caps; it cannot touch the allowlist, pause state or owner |
+| `admin` | admin badge | warm ops account | `set_paused`, `award_prize` (capped). **Cannot** withdraw or change the allowlist. A compromised admin key can pay out prizes up to the cap, so the admin account is a prize-custody account, not just a pause switch |
+| `awarder` | not built (R5 = no) | n/a | `award_prize` within caps. A compromised server key can drain prizes up to the caps; it cannot touch the allowlist, pause state or owner |
 | depositor | none | anyone | `deposit_prize` of allowlisted resources only |
 
 Two badge options (ruling R2):
@@ -314,30 +321,30 @@ weighs the shared-loss cost.
 `forbidden` at instantiate should contain: the v2 owner, admin badge addresses; the achievement NFT
 collection's owner and minter badge addresses; the v1 owner/admin badge address. This is a
 backstop for operator error in `allow_resource`. It cannot cover a badge created later, which is why
-the claim in §3.1(6) rests on the allowlist, not on this list.
+the claim in §3.1(6) rests on the unlisted-fungible rule plus this list, and a future non-fungible badge must be added here in the change that creates it.
 
 ### 3.5 Awarding, and the hot key
 
-The only automated actor in the repo today is the hot signer (`BOT_PRIVATE_KEY`). Giving it an
+R5 is ruled **no**: there is no `awarder` badge and no server-driven award in v1. Awards are signed by the admin (capped) or an owner. For reference, the only automated actor in the repo today is the hot signer (`BOT_PRIVATE_KEY`). Giving it an
 `awarder` badge turns "server key compromised" from "the prize treasury is the hot account and the
 minter badge shares it" (today) into "prizes up to the cap per window". The cap numbers are UNKNOWN
-and are an owner ruling (R5). If R5 is "no": awards are admin- or owner-signed manually in v1 and the
-component ships without `awarder`, which removes the hot-key exposure entirely at the cost of
-operator hands per award. That is the conservative default and the one this document recommends for v1,
-consistent with "no on-chain draw or raffle path exists" in `STATE.md`.
+(UNKNOWN, no longer needed). The component ships without `awarder`, which removes the hot-key
+exposure at the cost of operator hands per award, consistent with "no on-chain draw or raffle path exists" in `STATE.md`.
 
 ### 3.6 Failure modes
 
 | Failure | What happens | Mitigation | Residual |
 |---|---|---|---|
-| Allowlist wrong at instantiate (extra entry) | that resource can enter | `get_allowlist` read-back before any funding (§3.7); `disallow_resource` + `withdraw_prize` | anything deposited in the window is recoverable only by OWNER |
+| Allowlist wrong at instantiate (extra entry, especially a fungible) | that resource can enter | `get_allowlist` read-back before any funding (§3.7); `disallow_resource` + `withdraw_prize` | anything deposited in the window is recoverable only by OWNER |
 | Allowlist wrong (missing entry) | deposits of that resource abort | none needed; `allow_resource` | none: fails closed |
-| An allowlisted resource is itself used as a badge by something | a prize deposit could put authority inside the vault | v1 allowlist = two resources we created; their roles are in this repo (`lib.rs` of each blueprint): ROLLS roles use `global_caller(component)`; the NFT collection's minter/burner use `global_caller` / `deny_all`; neither is required by any role rule we wrote | **UNKNOWN** for any third-party resource: a third party can write a rule naming any resource. Hence no third-party gifts in v1 |
+| A gifted third-party NFT is itself someone's authority badge | that party's authority sits in our vault; a role rule elsewhere may then be unsatisfiable until OWNER withdraws it | harm is to the donor's own rules, not ours; OWNER `withdraw_prize` can return it | **UNKNOWN** how often; nothing on-ledger identifies it (§2.1) |
+| Spam, offensive or malicious third-party NFTs | vault fills with junk; public pool display renders attacker-chosen name and icon | OWNER can `disallow_resource` and withdraw; R11 limits what the public page renders | storage cost to the vault is UNKNOWN until stokenet |
+| A tier-1 resource is used as a badge by something | a prize deposit could put authority inside the vault | the two tier-1 resources are ours; their roles are in this repo: ROLLS roles use `global_caller(component)`; the NFT collection's minter/burner use `global_caller` / `deny_all`; no role rule we wrote requires either | none known |
 | ROLLS paid out as a prize is later burned via the game vault | normal path | ROLLS burn is component-gated, unaffected | none |
-| `award_prize` abused by `awarder` | caps limit loss | caps; pause by admin; `disallow` | cap sizing UNKNOWN |
+| `award_prize` abused by a compromised `admin` key | caps limit loss | per-call cap; OWNER pauses (admin could re-unpause) and rotates the admin rule | cap sizing UNKNOWN |
 | Owner badge lost (one of two) | other still works | two owner accounts, `Updatable` rule: rotate | both lost = stuck, same as any `Updatable` owner role |
 | Env mirror drifts from ledger | server refuses to enable pool | boot check §3.3 | operator sees "disabled", not wrong data |
-| Donor sends a non-allowlisted resource | transaction aborts, nothing moves, donor pays the fee | none needed | donors who expected an account-style address are confused; the public copy must say "use the app's gift flow" (R7) |
+| Donor sends an unlisted fungible, or a forbidden resource | transaction aborts, nothing moves, donor pays the fee | none needed | donors who expected an account-style address are confused; the public copy must say "use the app's gift flow" and "NFTs only" (R10) |
 | Package defect | cannot be patched in place | stokenet rehearsal, ledger tests, Tier A review, WASM hash read-back | a redeploy and migration of holdings by OWNER withdraw |
 
 ### 3.7 Read-backs that prove the claim on the Gateway
@@ -347,27 +354,28 @@ All pinned to one `state_version` and recorded with that number. What the Gatewa
 
 1. **Code**: package address of the component; code hash from the package's code listing equals the
    hash of the CI-built WASM artifact for the pinned commit (§4 step 6). Proves "this code".
-2. **State**: component state fields include the allowlist; it contains exactly the two reviewed
-   addresses and the `forbidden` set.
+2. **State**: component state fields include the allowlist (exactly the two tier-1 addresses) and
+   the `forbidden` set.
 3. **Roles**: owner rule `Updatable`, requiring the owner badge; `admin` rule requires the admin
    badge; method auth matches §3.2 (no method with `PUBLIC` that moves value out).
-4. **Holdings**: every vault's resource ∈ allowlist; and explicit zero-balance reads for each of the
-   known custody badge addresses (v2 owner, v2 admin, NFT owner, NFT minter, v1 badge).
+4. **Holdings**: every fungible vault's resource ∈ allowlist; every non-fungible vault's resource ∉
+   `forbidden`; and explicit zero-balance reads for each known custody badge address (v2 owner, v2
+   admin, NFT owner, NFT minter, v1 badge).
 5. **Custody**: owner×2 / admin×1 sit in three distinct accounts, deployer holds none
    (the existing `verifyCustody` shape).
 6. **Optional negative proof** (OWNER OK needed, ruling R8): a transaction **preview** (dry run,
    nothing submitted) that tries to `deposit_prize` an owner badge from an account holding one; the
-   expected result is an abort with the allowlist assertion. UNKNOWN whether preview with assumed
+   expected result is an abort with the unlisted-fungible assertion. UNKNOWN whether preview with assumed
    signatures is available for this on mainnet; fall back to the stokenet run.
 
 ### 3.8 What the Gateway cannot prove
 
 - It shows **current** holdings and **current** code, not that no badge ever sat inside earlier. For
   "never": the ledger transaction stream for the component (deposit events) is the history, and the
-  allowlist assert is the reason no other resource could have entered. The claim is code plus
+  acceptance rule is the reason no unlisted fungible could have entered. The claim is code plus
   hash-matched artifact plus tests, not a single read.
-- It does not tell you a resource "is a badge" (§2.1). It cannot validate that an allowlisted
-  third-party resource is not referenced by someone's role rule.
+- It does not tell you a resource "is a badge" (§2.1). It cannot validate that a gifted
+  third-party NFT is not referenced by someone's role rule.
 - It does not prove the source on GitHub is what was published unless the artifact hash step in §4
   is done and recorded.
 
@@ -393,7 +401,7 @@ backs them. One lane = one agent session in its own worktree. Nothing starts bef
 | 2 | Blueprint `scrypto/prize-vault` per §3.2, events, `forbidden` set, doc comments in the repo's style | blueprint, `cargo check` green | 4 to 6 |
 | 3 | Ledger tests (list below) | tests in `scrypto/prize-vault/tests` | 5 to 7 |
 | 4 | Server: `deploy-prize-vault.ts` mirroring the v2 custody rules (three distinct accounts, deployer holds none, read-back); allowlist mirror boot check; manifest builders that call `assertAllowedPrizeResources`; no award route unless R5 is yes | server code and tests | 6 to 8 |
-| 5 | Docs and public copy: `STATE.md`, `PROVENANCE.md`, the tokenomics "gift an NFT" section (R7), `.env.example` | docs | 2 to 3 |
+| 5 | Docs and public copy: `STATE.md`, `PROVENANCE.md`, the tokenomics "gift an NFT" section (R7, R10), `.env.example` | docs | 2 to 3 |
 | 6 | Reproducible artifact: CI wasm+rpd for the pinned commit, `sha256` recorded, compared with a `scrypto-builder` build and, after deploy, with `code_hash_hex` | recorded hashes | 2 to 3 (shares the ruling-6 "CI-artifact" PR with the v2 vault) |
 | 7 | Stokenet rehearsal, three distinct test accounts, including the negative deposit | transcript | 2 to 3 plus owner time |
 | 8 | Tier A review in a separate session | `agent/reviewed` | 3 to 4 |
@@ -409,11 +417,12 @@ Total about 28 to 38 lane-h, **ESTIMATE**. It could move if step 1 finds a surpr
 4. XRD deposit aborts (not allowlisted).
 5. No manifest route puts a foreign resource into the component other than the checked methods
    (covers the INFERRED claim in §2.2).
-6. `award_prize` and `withdraw_prize` fail for the wrong role; succeed for the right one; admin cannot award or withdraw.
+6. `award_prize` and `withdraw_prize` fail for the wrong role; admin can award within the cap but cannot withdraw or change the allowlist.
+6a. Tier 2: a third-party NFT is accepted; a third-party fungible is rejected; an NFT on `forbidden` is rejected.
 7. `allow_resource` rejects XRD, `forbidden` entries and the vault's own badges; works for OWNER only.
 8. `disallow_resource` blocks deposit and award, and OWNER can still withdraw that resource.
 9. Pause blocks deposit and award; does not block `withdraw_prize`.
-10. Caps (if R5 yes): per-call and per-window; a second award past the cap aborts.
+10. Admin per-call cap: an award over the cap aborts; OWNER is not capped.
 11. Owner role is `Updatable`; rotating the owner rule works and the old badge stops working.
 12. Instantiate refuses an empty or duplicate allowlist (fail closed).
 13. Events emitted for every state change.
@@ -426,21 +435,24 @@ P0 read-only facts · P1 artifact fetch and hash · P2 publish preview for the f
 P6 server env and restart (owner edits the env) · P7 first allowlisted deposit and read-back ·
 P8 negative-case proof (R8) · P9 registry rows and docs PR.
 
-## 5. Owner rulings owed before any build
+## 5. Owner rulings
 
-Each is yes/no; the recommendation is stated, and none is a decision.
+R1 to R9 were answered by the owner in chat on 7 Nov 2026. R6 changed the design (open third-party
+NFT gifts), which raises R10 and R11; both are still open.
 
-| # | Question | Recommend |
-|---|---|---|
-| R1 | Prize vault is a separate package and component, not a method on the v2 vault? | Yes |
-| R2 | Prize vault reuses the v2 owner×2 / admin badge resources (option A), rather than minting a new set (option B)? | Yes (A) |
-| R3 | The allowlist is on-ledger and OWNER-appendable (not frozen at instantiate)? | Yes |
-| R4 | `deposit_prize` is PUBLIC (anyone can add allowlisted prizes)? | Yes |
-| R5 | An automated `awarder` badge in the hot server key, with caps? | **No** for v1 (admin/owner-signed awards) |
-| R6 | v1 allowlist is only the v2 ROLLS resource and the achievement collection; community-gifted third-party NFTs are out of scope? | Yes |
-| R7 | The public "gift an NFT" copy and the hot account's role as published treasury are retired in favour of the vault's app flow? | Yes |
-| R8 | A mainnet transaction-preview negative test is acceptable (no submission)? | Yes |
-| R9 | The prize vault deploys in a later sitting than the v2 vault, not the same one? | Yes (matches the sheet: "Not part of this sitting") |
+| # | Question | Recommendation | Owner answer, 7 Nov |
+|---|---|---|---|
+| R1 | Separate package and component, not a method on the v2 vault? | Yes | **Yes** |
+| R2 | Reuse the v2 owner×2 / admin badge resources (option A) rather than a new set (B)? | Yes (A) | **Yes** |
+| R3 | Allowlist on-ledger and OWNER-appendable? | Yes | **Yes** |
+| R4 | `deposit_prize` PUBLIC? | Yes | **Yes** |
+| R5 | Automated `awarder` badge in the hot server key? | No for v1 | **No** (as recommended) |
+| R6 | Restrict to the two allowlisted resources, third-party NFTs out of scope? | Yes | **Reversed: allow third-party NFT deposits** ("why restrict?"). Recorded as tiers in §3.1(5) |
+| R7 | Retire the public "gift an NFT" copy and the hot account as published treasury? | Yes | **"See 6"**, read as: gifting stays open. Whether the donation target moves to the vault is R10 |
+| R8 | Mainnet preview negative test acceptable? | Yes | **Yes** |
+| R9 | Prize vault deploys in a later sitting than the v2 vault? | Yes | **Yes** |
+| R10 | Donation target moves from the hot account to the vault's app gift flow, copy says "NFTs only"? | Yes | **open** |
+| R11 | Public pool page shows third-party NFTs by count only (no attacker-chosen name or icon rendered) until the owner reviews a resource? | Yes | **open** |
 
 ## 6. Not decided here
 
