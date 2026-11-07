@@ -1,0 +1,122 @@
+name: Scrypto build artifact
+
+# Builds the Scrypto packages (scrypto/meme-token = the v2 vault, scrypto/meme-nfts)
+# with the `scrypto` CLI and publishes the .wasm + .rpd + SHA256SUMS as ONE workflow
+# artifact, so a deploy can take the package from a pinned commit instead of from a
+# Mac (cannot build it: blst will not compile for wasm32) or from a Rust install on
+# the production box.
+#
+# ci.yml's scrypto job also uploads wasm+rpd, but only as a best-effort step
+# (continue-on-error) with no checksums. This workflow is the one whose job is the
+# artifact: it fails loudly, prints the sums in the log, and has no test gate to
+# hide behind -- tests stay in ci.yml.
+#
+# It builds only. It deploys nothing, touches no box or ledger, and uses no secrets.
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "scrypto/**"
+      - ".github/workflows/scrypto-build.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least privilege: the job only reads the repository. Uploading an artifact needs
+# no token scope beyond this.
+permissions:
+  contents: read
+
+env:
+  # Must match the scrypto / scrypto-test 1.3.x this workspace builds against, and
+  # the version ci.yml installs. Bumping it here invalidates the CLI cache below.
+  # Install method: `cargo install radix-clis` -- the Radix docs' documented source
+  # install (radixdlt/radixdlt-scrypto v1.3.1 publishes no prebuilt binaries).
+  RADIX_CLIS_VERSION: 1.3.1
+
+jobs:
+  build:
+    name: Build wasm + rpd
+    runs-on: ubuntu-latest
+    # Same reasoning as ci.yml: a cold CLI compile alone has taken ~17-37 minutes.
+    timeout-minutes: 70
+    defaults:
+      run:
+        working-directory: scrypto
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      # rust-toolchain.toml pins the compiler (1.92.0) and the wasm32 target; rustup
+      # on the runner installs what it names. rust-src is needed by the build (see
+      # the long note in ci.yml). Versions are printed so the log says what ran.
+      - name: Toolchain
+        run: |
+          rustup show active-toolchain
+          rustup target add wasm32-unknown-unknown
+          rustup component add rust-src
+          rustc --version && cargo --version
+
+      # Same entry ci.yml uses for the CLI (same key), so a warm cache is shared.
+      - name: Cache the scrypto CLI binary
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/.crates.toml
+            ~/.cargo/.crates2.json
+          key: radix-clis-${{ runner.os }}-${{ env.RADIX_CLIS_VERSION }}
+
+      - name: Install scrypto CLI (pinned)
+        timeout-minutes: 45
+        run: |
+          if command -v scrypto >/dev/null && scrypto --version | grep -q "$RADIX_CLIS_VERSION"; then
+            echo "scrypto CLI already installed (cache hit)"
+          else
+            cargo install radix-clis --version "$RADIX_CLIS_VERSION" --locked
+          fi
+          scrypto --version
+
+      # Fails if Cargo.lock does not already satisfy the manifests, so dependencies
+      # cannot drift under the build. Release profile comes from scrypto/Cargo.toml
+      # [profile.release] (`scrypto build` is a release build by default).
+      - name: Lockfile is current
+        run: cargo fetch --locked
+
+      - name: scrypto build
+        run: |
+          set -euo pipefail
+          scrypto build --path meme-token
+          scrypto build --path meme-nfts
+
+      - name: Collect artifacts and checksums
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          # Output location differs between a package and a workspace build, so
+          # find it rather than assume it; the listing goes in the log.
+          find . -path ./artifacts -prune -o \( -name '*.wasm' -o -name '*.rpd' \) -path '*release*' -print | sort
+          for n in meme_token meme_nfts; do
+            for ext in wasm rpd; do
+              src=$(find . -path ./artifacts -prune -o -path '*release*' -name "$n.$ext" -not -path '*/deps/*' -print | head -n1)
+              test -n "$src" && test -s "$src" || { echo "missing or empty: $n.$ext"; exit 1; }
+              echo "$n.$ext <- $src"
+              cp "$src" artifacts/
+            done
+          done
+          cd artifacts
+          sha256sum meme_token.wasm meme_token.rpd meme_nfts.wasm meme_nfts.rpd | tee SHA256SUMS
+          sha256sum --check SHA256SUMS
+          ls -la
+          echo "commit ${GITHUB_SHA}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          # github.sha is the real commit here: this workflow has no pull_request
+          # trigger, so it is never the ephemeral merge commit.
+          name: scrypto-build-${{ github.sha }}
+          path: scrypto/artifacts/
+          if-no-files-found: error
+          retention-days: 30
