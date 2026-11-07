@@ -25,10 +25,10 @@
 export const DAPP_DEF = process.env.NEXT_PUBLIC_DAPP_DEF || "";
 
 // ⛔ The v1 vault `component_rdx1czh262wv…tj6lgxy` is RETIRED and must never be a fallback
-// again. Its owner AND admin roles both require one badge, held in
-// `account_rdx12xgra93…z223v2x`. That account's key is held, so the vault's XRD is
-// recoverable in principle with a proof of the badge. On 2026-10-19 the badge moved to another
-// operator-held account and the vault's 160 XRD was withdrawn (docs/VAULT-V1-LOST.md). The v2
+// again. Its owner AND admin roles both require one badge, held until 2026-10-19 in
+// `account_rdx12xgra93…z223v2x`. On 2026-10-19 the badge moved to another operator-held account
+// and the vault's 160 XRD was withdrawn the same day; no recovery is planned
+// (docs/VAULT-V1-LOST.md). The v2
 // vault blueprint is built; its deploy is an operator sitting still pending (STATE.md). The
 // owner rule's updater is `None`, so the rule itself can never be reassigned: any XRD that
 // reaches the v1 vault can leave only through that one badge.

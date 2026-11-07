@@ -8,7 +8,7 @@ citations, deploy records and a working history that are only useful with the fu
 history in hand. Code comments that cite "PROJECT-STATE item N" refer to it. This page carries
 the conclusions, not the derivation.
 
-_Last written: 2026-11-07. Re-read on 2026-11-06: the deployed commit, the live site's public health endpoint,
+_Last written: 2026-11-07 (AEDT). Re-read on 2026-11-06: the deployed commit, the live site's public health endpoint,
 `GET /api/token/info`, `GET /api/vault/nfts`, the response headers and `/gift`; and, on the
 Radix Gateway (ledger state version 567581462), the NFT collection's supply and the v1-vault
 entry. Everything else stands as written on 2026-10-13 against the live site's public API, the
@@ -22,12 +22,12 @@ deployed commit and `docs/PROJECT-STATE.md`, and was not re-read on 2026-11-06._
   with a local patch. Read back on 2026-11-06 after the restart: the public health endpoint
   reported 41 player rows and 16 boards, and both processes were online. This describes that
   day; it is not re-read automatically.
-- **Live and maintained; feature work resumed 2026-11-07.** The game is deployed at
+- **Live and maintained; feature work resumed 2026-11-07 (AEDT).** The game is deployed at
   [memegrid.radixguild.com](https://memegrid.radixguild.com) and playable. Its public health
   endpoint reports 41 player rows and 16 boards ever started, the same 16 as on 2026-10-04, so no
   new board has been started since then; seven NFTs have been minted in total (the collection's
-  supply on the Radix Gateway is 7, none burned). There is no marketing and no community
-  programme yet. Next: the v2 vault and prize vault deploy, an operator sitting not yet
+  supply on the Radix Gateway is 7, none burned). Currently there is no marketing or community
+  programme. Next: the v2 vault and prize vault deploy, an operator sitting not yet
   scheduled. The repository is published as a working reference of what can be built on Radix.
 - **One pseudonymous developer (`bigdev`), working with AI assistance.** No company, no token
   sale, no treasury beyond the accounts named in [`PROVENANCE.md`](./PROVENANCE.md).
