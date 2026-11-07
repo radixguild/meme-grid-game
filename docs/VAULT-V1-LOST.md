@@ -1,14 +1,14 @@
 # Vault v1 — owner badge stranded, then moved; 160 XRD withdrawn 2026-10-19 — post-mortem and tombstone
 
 > **Update, 2026-11-06 (Radix Gateway read, ledger state version 567581462).** On 2026-10-19 the
-> owner badge moved from `…z223v2x` to a different account (transaction
+> owner badge moved from `…z223v2x` to another operator-held account (transaction
 > `txid_rdx1ncfw8mgskr5xd4rfwahs4rdau6c035kwm4em4vnl3hy5gh5w6qdscu3rxk`, state version
 > 564216949), and about ten minutes later the vault's 160 XRD was withdrawn to that same account
 > (`txid_rdx1g4rjeg90szl4r3epev3gqdg0qlrj54s2kv42rn6ltg6rg03ajwgqgjxsz6`, state version
 > 564218465). Today the vault holds **0 XRD** and is not paused; its owner and admin roles still
 > require the same badge, and `…z223v2x` no longer holds it. This supersedes the 2026-10-11
-> "neither has been moved" statements; they are quoted under "Correction history". The game
-> stays off v1.
+> "neither has been moved" statements; they are quoted under "Correction history". No reason for
+> the move is recorded here. The game has not routed purchases to v1 since 2026-08-21.
 >
 > **Correction, 2026-10-06 (balances re-read from the Radix Gateway on 2026-10-08).** The
 > 2026-08-20 finding that no key controlled `…z223v2x`, the account holding this vault's owner
@@ -18,7 +18,7 @@
 > still holds the owner badge (×1) and a small XRD fee reserve, and the vault still holds
 > **160 XRD** (both superseded on 2026-10-19; see the update above). What stands: the owner
 > rule can never be re-pointed, the two-vault confusion, the design lesson, and the inflow cut —
-> the game stays off v1. The main superseded sentences are quoted verbatim under "Correction
+> the game has not routed purchases to v1 since 2026-08-21. The main superseded sentences are quoted verbatim under "Correction
 > history" at the end of this file.
 
 **Established 2026-08-20 by on-chain reads plus a key-derivation check; the no-key finding was
@@ -78,8 +78,9 @@ proof that a key does not exist; derive it.
 purchase routed more XRD into a vault nobody could then drain.** About 160 XRD sat in the vault
 at discovery, and the same 160 XRD sat there until it was withdrawn on 2026-10-19. The account
 holding the badge held a further ~510 XRD of its own, counted at the time as equally
-unreachable; once its key was found, about 505 XRD of that was moved to another operator-held account on 2026-10-04. Not a financial
-emergency at any point, but structural and, until the cut below, accumulating.
+unreachable; after its key was found, about 505 XRD of that was moved to another operator-held
+account on 2026-10-04. It was not a financial emergency at any point, but it was structural and,
+until the cut below, accumulating.
 
 ## The cut
 
@@ -98,10 +99,11 @@ emergency at any point, but structural and, until the cut below, accumulating.
    three distinct custody accounts are set and none of them is the deploying key, then verifies
    the badge placement on-chain before reporting success. It has not been deployed — see
    `STATE.md`.
-5. **The vault's 160 XRD — withdrawn 2026-10-19.** The badge moved from `…z223v2x` to a
-   different account, and the 160 XRD was withdrawn from the vault to that account (the two
-   transactions in the update at the top). The vault held 0 XRD on the 2026-11-06 Gateway read.
-   Withdrawing the XRD does not put v1 back into service — the game stays off it.
+5. **The vault's 160 XRD — withdrawn 2026-10-19.** The badge moved from `…z223v2x` to
+   another operator-held account, and the 160 XRD was withdrawn from the vault to that account
+   (the two transactions in the update at the top). The vault held 0 XRD on the 2026-11-06
+   Gateway read. Withdrawing the XRD does not put v1 back into service: the game has not routed
+   purchases to v1 since 2026-08-21.
 
 ## The lesson worth keeping
 
