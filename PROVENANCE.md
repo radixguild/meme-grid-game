@@ -63,8 +63,8 @@ One person, `bigdev`, holds all of it:
   repository names no custody account as a default or a value to deploy with, and the operator
   chooses the three at deploy time.
 - **The game's dApp definition**
-  (`account_rdx12945s526fxx2c6faj3pykzl6jgl90mhwtnnsgp773r3rp37cstq4lx`) is an operator-held
-  account.
+  (`account_rdx128dfwn2l5us32hsglczh92mm3kn44ypefkmlv8kuyj0we5304jntfs`, since 2026-11-11;
+  earlier `…7cstq4lx`) is an operator-held account.
 - **There is no other legal entity.** No company, no foundation, no DAO, no token sale.
 
 This is a statement of present fact, not a plan to keep it this way.

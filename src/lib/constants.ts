@@ -1,9 +1,8 @@
-// MEME GRID's dedicated dApp Definition account:
-//   account_rdx12945s526fxx2c6faj3pykzl6jgl90mhwtnnsgp773r3rp37cstq4lx  ("MEME GRID")
-// Configured on-chain 2026-07-18 (separation S1): account_type="dapp definition",
-// name="MEME GRID", claimed_websites=[memegrid.radixguild.com],
-// claimed_entities=[vault, ROLLS, NFT, package]. Wallet connect now identifies as
-// "MEME GRID". The verified website↔dApp backlink is public/.well-known/radix.json.
+// MEME GRID's dedicated dApp Definition account (since 2026-11-11; earlier …7cstq4lx):
+//   account_rdx128dfwn2l5us32hsglczh92mm3kn44ypefkmlv8kuyj0we5304jntfs  ("MEME GRID")
+// On-chain metadata (set 2026-11-11): name="MEME GRID",
+// claimed_websites=[memegrid.radixguild.com], no claimed entities yet. Wallet connect
+// identifies as "MEME GRID". The verified website↔dApp backlink is public/.well-known/radix.json.
 //
 // Separation S2 has LANDED too (phase2a): re-verified against live mainnet
 // 2026-07-26 — the guild dApp def
