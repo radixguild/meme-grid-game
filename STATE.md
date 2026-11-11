@@ -104,7 +104,7 @@ deployed commit and `docs/PROJECT-STATE.md`, and was not re-read on 2026-11-06._
   a vault to hold it.
 - **The MEME token's and the NFT collection's `dapp_definitions` metadata is locked** to the
   Radix Guild's dApp definition, the game's original home, and can only change with a redeploy.
-  The game's own dApp definition claims the entities in the other direction, and the Guild's
+  The game's current dApp definition (since 2026-11-11) claims no entities, and the Guild's
   released them on 2026-07-18.
 - **The free-ROLLS faucet is mitigated, not closed.** Fabricated addresses are rejected,
   first-time funding needs a proven session, and newly funded wallets per IP per day are capped;
