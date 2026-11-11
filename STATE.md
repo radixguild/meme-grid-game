@@ -50,7 +50,7 @@ deployed commit and `docs/PROJECT-STATE.md`, and was not re-read on 2026-11-06._
   the leaderboard, guest play. Server-authoritative; randomness never leaves the server.
 - **Wallet sign-in** via ROLA (Radix Off-Ledger Auth). The client requests persona and account
   proofs on connect; the server verifies them against the game's own dApp definition
-  (`account_rdx12945s526fxx2c6faj3pykzl6jgl90mhwtnnsgp773r3rp37cstq4lx`) and issues a session.
+  (`account_rdx128dfwn2l5us32hsglczh92mm3kn44ypefkmlv8kuyj0we5304jntfs`) and issues a session.
   Funding and spend routes require a proven session for wallet addresses
   (`required-for-wallets`). Guests are server-issued, HMAC-signed ids, metered per IP.
 - **Achievement NFT minting** on Radix mainnet, from the game's own collection to the player's
