@@ -12,7 +12,9 @@ _Last written: 2026-11-07 (AEDT). Re-read on 2026-11-06: the deployed commit, th
 `GET /api/token/info`, `GET /api/vault/nfts`, the response headers and `/gift`; and, on the
 Radix Gateway (ledger state version 567581462), the NFT collection's supply and the v1-vault
 entry. Everything else stands as written on 2026-10-13 against the live site's public API, the
-deployed commit and `docs/PROJECT-STATE.md`, and was not re-read on 2026-11-06._
+deployed commit and `docs/PROJECT-STATE.md`, and was not re-read on 2026-11-06. Edited
+2026-11-13 for code changes on `main` that are not yet deployed (marked "not yet deployed"
+below); no live value was re-read for that edit._
 
 ## Right now *(as of 2026-11-06)*
 
@@ -42,12 +44,16 @@ deployed commit and `docs/PROJECT-STATE.md`, and was not re-read on 2026-11-06._
 - **The NFT prize pool fails closed.** The server publishes a donation address and lists prizes
   held there only for resources named in `NFT_PRIZE_RESOURCE_ALLOWLIST`. That variable is unset
   in production, so `GET /api/vault/nfts` lists zero prizes by design, and no draw or raffle
-  path exists in the code — the on-chain send is a `TODO`.
+  path exists in the code — the on-chain send is a `TODO`. On `main` (not yet deployed) the
+  route also publishes no address at all when `NFT_TREASURY_ACCOUNT` is the server's signing
+  account or holds a known custody badge, or when it cannot check either, and `/tokenomics`
+  no longer shows a prize-pool or donation section.
 
 ## Live today
 
 - **Play:** boards, rolls, lines, patterns, combos, levels, streaks, power-ups, the daily board,
-  the leaderboard, guest play. Server-authoritative; randomness never leaves the server.
+  the leaderboard, guest play. Server-authoritative; randomness never leaves the server. On
+  `main` (not yet deployed) the public leaderboard lists wallet accounts only, never a guest id.
 - **Wallet sign-in** via ROLA (Radix Off-Ledger Auth). The client requests persona and account
   proofs on connect; the server verifies them against the game's own dApp definition
   (`account_rdx128dfwn2l5us32hsglczh92mm3kn44ypefkmlv8kuyj0we5304jntfs`) and issues a session.
@@ -55,6 +61,9 @@ deployed commit and `docs/PROJECT-STATE.md`, and was not re-read on 2026-11-06._
   (`required-for-wallets`). Guests are server-issued, HMAC-signed ids, metered per IP.
 - **Achievement NFT minting** on Radix mainnet, from the game's own collection to the player's
   wallet, signed by a server-held key. 13 of the 23 catalogued NFTs are obtainable.
+  On `main` (not yet deployed) mints are capped per UTC day by `NFT_MINT_DAILY_CAP`: mints over
+  the cap wait in the queue for the next day and are not marked failed. Unset on mainnet means
+  paused (queued, none submitted), so the deploy must set it.
 - **Security headers** on every route of both halves; both processes listen on localhost only,
   behind a reverse proxy.
 
@@ -101,7 +110,9 @@ deployed commit and `docs/PROJECT-STATE.md`, and was not re-read on 2026-11-06._
   account signs NFT mints, holds the collection's minter badge, and is what `/tokenomics` and
   `GET /api/vault/nfts` publish as the prize-pool treasury. A dedicated prize vault that cannot
   hold badges is the planned fix and is not done. Do not send anything of value there expecting
-  a vault to hold it.
+  a vault to hold it. On `main` (not yet deployed) neither `/tokenomics` nor
+  `GET /api/vault/nfts` publishes the signing account; the key and the badge it holds are
+  unchanged.
 - **The MEME token's and the NFT collection's `dapp_definitions` metadata is locked** to the
   Radix Guild's dApp definition, the game's original home, and can only change with a redeploy.
   The game's current dApp definition (since 2026-11-11) claims no entities, and the Guild's

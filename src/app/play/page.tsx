@@ -459,7 +459,7 @@ export default function PlayPage() {
             <span>Row/Column: +25 pts</span>
             <span>Diagonal: +50 pts</span>
             <span>2 lines at once: x2.5 combo!</span>
-            <span>3+ lines: x4+ combo!</span>
+            <span>3 lines: x4 combo!</span>
             <span>Four Corners: +30 pts</span>
             <span>Full Border: +100 pts</span>
             <span>X Pattern: +80 pts</span>

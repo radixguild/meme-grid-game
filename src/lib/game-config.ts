@@ -61,12 +61,12 @@ export const POWER_UPS = [
 // the farm vector. Advertising "10 ROLLS" here for a server that pays none is the
 // worst kind of stale copy: the player can see it did not happen.
 //
-// Tiers are 1/2/3/5/7/14/30 server-side; the four shown here are the ones with
-// something to announce.
+// Tiers are 1/2/3/5/7/14/30 server-side; the ones shown here are those that
+// pay a power-up. streaks.ts also defines `bonusXpPercent`, but nothing on the
+// server applies it, so no XP bonus is advertised.
 export const STREAK_MILESTONES = [
-  { days: 3, label: "3-Day Streak", reward: "+10% XP" },
-  { days: 5, label: "5-Day Streak", reward: "+15% XP + Re-Roll" },
-  { days: 7, label: "Week Warrior", reward: "+20% XP + X-Ray" },
-  { days: 14, label: "Two Weeks", reward: "+30% XP + Magnet" },
-  { days: 30, label: "Monthly Legend", reward: "+50% XP + Row Bomb" },
+  { days: 5, label: "5-Day Streak", reward: "Re-Roll power-up" },
+  { days: 7, label: "Week Warrior", reward: "X-Ray power-up" },
+  { days: 14, label: "Two Weeks", reward: "Magnet power-up" },
+  { days: 30, label: "Monthly Legend", reward: "Row Bomb power-up" },
 ];

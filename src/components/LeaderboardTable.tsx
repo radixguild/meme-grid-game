@@ -93,8 +93,11 @@ export default function LeaderboardTable() {
       </div>
       {!loading && (hiddenCount > 0 || (account && myRank === -1)) && (
         <div className="border-t border-gray-800/50 px-4 py-2 text-[11px] text-gray-500">
+          {/* The server lists wallet accounts only; guest ids are never listed. */}
           {account && myRank === -1
-            ? "You're not on this board yet — finish a roll to appear."
+            ? account.startsWith("guest_")
+              ? "Guest scores are not listed here; only wallet players are."
+              : "You're not on this board yet — finish a roll to appear."
             : `${hiddenCount} player${hiddenCount === 1 ? "" : "s"} not ranked yet.`}
         </div>
       )}

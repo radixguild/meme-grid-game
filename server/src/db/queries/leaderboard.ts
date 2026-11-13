@@ -28,6 +28,15 @@ export interface LeaderboardEntry {
 const PUBLIC_COLUMNS =
   "radix_address, display_name, level, xp, total_boards, best_score, total_rolls";
 
+/**
+ * Only real on-ledger accounts are listed. A guest id is the guest's
+ * credential (see auth/guest-id.ts), so it never appears in a public response.
+ * This is an allowlist on purpose: a future id type stays off the public list
+ * until someone decides it is safe to show. GLOB, not LIKE: `_` is a wildcard
+ * in LIKE.
+ */
+const LISTED_ROWS = "radix_address GLOB 'account_*'";
+
 interface PlayerRow {
   radix_address: string;
   display_name: string | null;
@@ -55,7 +64,9 @@ function enrichEntry(row: PlayerRow): LeaderboardEntry {
 
 function topBy(orderColumn: "xp" | "best_score" | "total_boards", limit: number): LeaderboardEntry[] {
   const rows = getDb()
-    .prepare(`SELECT ${PUBLIC_COLUMNS} FROM players ORDER BY ${orderColumn} DESC LIMIT ?`)
+    .prepare(
+      `SELECT ${PUBLIC_COLUMNS} FROM players WHERE ${LISTED_ROWS} ORDER BY ${orderColumn} DESC LIMIT ?`,
+    )
     .all(limit) as PlayerRow[];
   return rows.map(enrichEntry);
 }

@@ -101,14 +101,14 @@ export default function Home() {
           <FeatureCard
             emoji="💎"
             title="Combos & Jackpots"
-            description="Complete rows, columns, diagonals for combo multipliers up to 10x. Chase the BLACKOUT for +500 points!"
+            description="Complete rows, columns, diagonals for combo multipliers up to x4. Chase the BLACKOUT for +500 points!"
             color="from-yellow-500/10 to-yellow-500/5"
             border="border-yellow-500/20"
           />
           <FeatureCard
             emoji="🏆"
             title="Level Up & Collect"
-            description={`10 levels from Normie to Meme Lord. ${OBTAINABLE_NFT_COUNT} earnable NFTs across 6 rarities. Daily streaks with escalating rewards.`}
+            description={`10 levels from Normie to Meme Lord. ${OBTAINABLE_NFT_COUNT} earnable NFTs across 6 rarities. Daily streaks that unlock power-ups.`}
             color="from-purple-500/10 to-purple-500/5"
             border="border-purple-500/20"
           />

@@ -179,18 +179,33 @@ describe("assertSignerCustody (boot check, run as a real subprocess per scenario
     assertNeverCalledGateway(r);
   });
 
-  it("warns but does not exit when NFT_TREASURY_ACCOUNT is a different (real) account", () => {
+  it("does not warn when NFT_TREASURY_ACCOUNT is a separate (real) account", () => {
     const r = runCustodyCheck({
       RADIX_NETWORK: "stokenet",
       BOT_PRIVATE_KEY: KEY_A_HEX,
       BOT_KEY_TYPE: "ed25519",
       RADIX_STOKENET_ADDRESS: keyAStokenet,
-      NFT_TREASURY_ACCOUNT: keyBStokenet, // legitimately a gift-only wallet
+      NFT_TREASURY_ACCOUNT: keyBStokenet, // a separate prize account, as intended
     });
 
     assert.equal(r.status, 0);
     assert.match(r.stdout, /custody verified/);
-    assert.match(r.stderr, /NFT_TREASURY_ACCOUNT is not the signing account/);
+    assert.doesNotMatch(r.stderr, /NFT_TREASURY_ACCOUNT/);
+    assertNeverCalledGateway(r);
+  });
+
+  it("warns but does not exit when NFT_TREASURY_ACCOUNT is the signing account", () => {
+    const r = runCustodyCheck({
+      RADIX_NETWORK: "stokenet",
+      BOT_PRIVATE_KEY: KEY_A_HEX,
+      BOT_KEY_TYPE: "ed25519",
+      RADIX_STOKENET_ADDRESS: keyAStokenet,
+      NFT_TREASURY_ACCOUNT: keyAStokenet,
+    });
+
+    assert.equal(r.status, 0);
+    assert.match(r.stdout, /custody verified/);
+    assert.match(r.stderr, /NFT_TREASURY_ACCOUNT is the signing account/);
     assertNeverCalledGateway(r);
   });
 });
