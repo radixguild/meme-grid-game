@@ -108,7 +108,7 @@ describe("leaderboard privacy boundary", () => {
     });
   }
 
-  // A guest id is the guest's whole credential, so it must never be listed.
+  // A guest id is the guest's credential, so it must never be listed.
   // Both shapes: the current signed id and the older client-minted one. They
   // are seeded ABOVE the wallet on every sort, so a missing filter puts them
   // at the top of the list rather than hiding them past the limit.
@@ -137,7 +137,7 @@ describe("leaderboard privacy boundary", () => {
         assert.deepEqual(
           listed.filter((a) => a.startsWith("guest_")),
           [],
-          `${name} published a guest id; anyone could act as that guest`,
+          `${name} published a guest id`,
         );
         assert.deepEqual(listed, [ADDR], "the wallet player is still listed");
       });

@@ -93,8 +93,7 @@ export default function LeaderboardTable() {
       </div>
       {!loading && (hiddenCount > 0 || (account && myRank === -1)) && (
         <div className="border-t border-gray-800/50 px-4 py-2 text-[11px] text-gray-500">
-          {/* The public list carries wallet accounts only: a guest id is the
-              guest's whole login, so the server never lists one. */}
+          {/* The server lists wallet accounts only; guest ids are never listed. */}
           {account && myRank === -1
             ? account.startsWith("guest_")
               ? "Guest scores are not listed here; only wallet players are."
