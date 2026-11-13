@@ -8,6 +8,7 @@
 import { getDb } from "../db/connection";
 import { signAndSubmit, waitForCommit, ACCOUNT } from "./signer";
 import { isOnChainAddress } from "../middleware/validate";
+import { getMintDailyCap, utcDay } from "./mint-cap";
 
 // These are set after deploy — loaded from deploy-state.json or env
 const NFT_RESOURCE = process.env.NFT_RESOURCE || "";
@@ -129,9 +130,67 @@ CALL_METHOD
 `.trim();
 }
 
+/** Last UTC day the "cap reached" line was logged, so the 30s worker logs it once a day. */
+let capLoggedForDay: string | null = null;
+
+/**
+ * Claim the next mint to attempt, or null if there is none or today's
+ * NFT_MINT_DAILY_CAP is used up (see services/mint-cap.ts).
+ *
+ * The cap check, the row claim (status → minting, attempts + 1) and the day's
+ * counter increment are one transaction, so the count can never run behind
+ * the attempts actually started. A row the cap holds back is not touched at
+ * all: it keeps its status and attempt count and is claimed on a later day.
+ */
+export function claimNextMint(now: Date = new Date()): any | null {
+  const db = getDb();
+  const cap = getMintDailyCap();
+  const day = utcDay(now);
+
+  return db.transaction(() => {
+    // Pick oldest pending or failed (with retries left)
+    // radix_address filter is defence in depth — queueNftMint() already rejects
+    // guests, but a legacy row must never reach the manifest builder.
+    const item = db.prepare(`
+      SELECT q.*, u.id as unlock_id
+      FROM nft_mint_queue q
+      JOIN nft_unlocks u ON u.id = q.nft_unlock_id
+      WHERE q.status IN ('pending', 'failed')
+        AND q.attempts < ?
+        AND q.radix_address LIKE 'account_%'
+      ORDER BY q.created_at ASC, q.id ASC
+      LIMIT 1
+    `).get(MAX_ATTEMPTS) as any;
+
+    if (!item) return null;
+
+    if (cap.limit !== null) {
+      const started =
+        (db.prepare("SELECT started FROM nft_mint_daily_count WHERE day = ?").get(day) as any)?.started ?? 0;
+      if (started >= cap.limit) {
+        if (capLoggedForDay !== day) {
+          capLoggedForDay = day;
+          console.warn(`[nft-minter] holding mints for ${day} (UTC): ${cap.describe}; ${started} started today. Queued mints are kept.`);
+        }
+        return null;
+      }
+    }
+
+    db.prepare("UPDATE nft_mint_queue SET status = 'minting', attempts = attempts + 1 WHERE id = ?")
+      .run(item.id);
+    db.prepare(`
+      INSERT INTO nft_mint_daily_count (day, started) VALUES (?, 1)
+      ON CONFLICT(day) DO UPDATE SET started = started + 1
+    `).run(day);
+
+    return item;
+  })();
+}
+
 /**
  * Process one pending mint from the queue.
- * Returns true if a mint was processed, false if queue is empty.
+ * Returns true if a mint was processed, false if the queue is empty or
+ * today's mint cap is used up.
  */
 export async function processOneMint(): Promise<boolean> {
   if (!NFT_RESOURCE || !NFT_MINTER_BADGE) {
@@ -139,28 +198,11 @@ export async function processOneMint(): Promise<boolean> {
   }
 
   const db = getDb();
-
-  // Pick oldest pending or failed (with retries left)
-  // radix_address filter is defence in depth — queueNftMint() already rejects
-  // guests, but a legacy row must never reach the manifest builder.
-  const item = db.prepare(`
-    SELECT q.*, u.id as unlock_id
-    FROM nft_mint_queue q
-    JOIN nft_unlocks u ON u.id = q.nft_unlock_id
-    WHERE q.status IN ('pending', 'failed')
-      AND q.attempts < ?
-      AND q.radix_address LIKE 'account_%'
-    ORDER BY q.created_at ASC
-    LIMIT 1
-  `).get(MAX_ATTEMPTS) as any;
-
+  const item = claimNextMint();
   if (!item) return false;
 
+  // `attempts` was read before the claim incremented it.
   console.log(`[nft-minter] Processing: ${item.nft_key} for ${item.radix_address.slice(0, 20)}... (attempt ${item.attempts + 1})`);
-
-  // Mark as minting
-  db.prepare("UPDATE nft_mint_queue SET status = 'minting', attempts = attempts + 1 WHERE id = ?")
-    .run(item.id);
 
   try {
     // Get description from nft catalog

@@ -14,6 +14,7 @@ import { createApp } from "./app";
 import { getDb } from "./db/connection";
 import { runMigrations } from "./db/migrations/runner";
 import { processOneMint, getMintQueueStats } from "./services/nft-minter";
+import { getMintDailyCap } from "./services/mint-cap";
 import { assertSignerCustody, recoverOrphanedTransactions } from "./services/signer";
 import { startAuthPurge } from "./auth/purge";
 
@@ -54,7 +55,7 @@ async function start() {
       (f) => f.includes("signing") || f.includes("NFT mint worker")
     );
     if (!mintDisabled) {
-      console.log("[nft-mint-worker] started (30s interval)");
+      console.log(`[nft-mint-worker] started (30s interval; ${getMintDailyCap().describe})`);
       setInterval(async () => {
         try {
           const processed = await processOneMint();
