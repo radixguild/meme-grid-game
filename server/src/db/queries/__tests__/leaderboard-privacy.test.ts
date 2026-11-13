@@ -108,6 +108,42 @@ describe("leaderboard privacy boundary", () => {
     });
   }
 
+  // A guest id is the guest's whole credential, so it must never be listed.
+  // Both shapes: the current signed id and the older client-minted one. They
+  // are seeded ABOVE the wallet on every sort, so a missing filter puts them
+  // at the top of the list rather than hiding them past the limit.
+  describe("guest rows", () => {
+    const SIGNED_GUEST = "guest_0123456789abcdef01234567";
+    const LEGACY_GUEST = "guest_k3j9x2mq7p";
+
+    beforeEach(() => {
+      const insert = getDb().prepare(
+        `INSERT INTO players (radix_address, display_name, level, xp, total_boards,
+           total_rolls, best_score)
+         VALUES (?, NULL, 9, 999999, 999, 99999, 9999)`,
+      );
+      insert.run(SIGNED_GUEST);
+      insert.run(LEGACY_GUEST);
+    });
+
+    for (const [name, fn] of [
+      ["getTopByXp", getTopByXp],
+      ["getTopByScore", getTopByScore],
+      ["getTopByGrids", getTopByGrids],
+    ] as const) {
+      it(`${name} never returns a guest id`, () => {
+        const entries = fn(100);
+        const listed = entries.map((e) => e.radix_address);
+        assert.deepEqual(
+          listed.filter((a) => a.startsWith("guest_")),
+          [],
+          `${name} published a guest id; anyone could act as that guest`,
+        );
+        assert.deepEqual(listed, [ADDR], "the wallet player is still listed");
+      });
+    }
+  });
+
   it("still returns the public fields it is supposed to", () => {
     const [entry] = getTopByXp(20);
     assert.equal(entry.radix_address, ADDR);
