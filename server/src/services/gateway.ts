@@ -85,19 +85,35 @@ export interface NftCollectionHolding {
   count: number;
 }
 
+export interface AccountHoldings {
+  /** Non-fungible collections held (count > 0), with name/icon metadata. */
+  nftCollections: NftCollectionHolding[];
+  /** Every resource address the account holds, fungible or not (amount > 0). */
+  resourceAddresses: string[];
+  /**
+   * True when the Gateway returned only the first page of either list, so
+   * `resourceAddresses` may be incomplete. A caller that must prove the
+   * account does NOT hold something has to treat this as unproven.
+   */
+  truncated: boolean;
+}
+
 /**
- * List NFT collections held by an account (Global aggregation), with
- * name/icon metadata resolved inline via the explicit_metadata opt-in —
- * one Gateway call total. Used for the public NFT prize-pool display.
+ * Everything an account holds, from one Gateway call (Global aggregation,
+ * name/icon metadata resolved inline via the explicit_metadata opt-in).
+ * Used for the public NFT prize-pool display and its custody checks.
  */
-export async function getAccountNftHoldings(account: string): Promise<NftCollectionHolding[]> {
+export async function getAccountHoldings(account: string): Promise<AccountHoldings> {
   const data = await gatewayPost("/state/entity/details", {
     addresses: [account],
     aggregation_level: "Global",
     opt_ins: { explicit_metadata: ["name", "icon_url"] },
   });
-  const items = data?.items?.[0]?.non_fungible_resources?.items || [];
-  return items
+  const entity = data?.items?.[0];
+  const fungibles = entity?.fungible_resources;
+  const nonFungibles = entity?.non_fungible_resources;
+
+  const nftCollections: NftCollectionHolding[] = (nonFungibles?.items || [])
     .map((it: any): NftCollectionHolding => {
       const meta = (key: string): string | null => {
         const entry = (it.explicit_metadata?.items || []).find((m: any) => m.key === key);
@@ -114,4 +130,19 @@ export async function getAccountNftHoldings(account: string): Promise<NftCollect
       };
     })
     .filter((c: NftCollectionHolding) => c.count > 0);
+
+  const heldFungibles: string[] = (fungibles?.items || [])
+    .filter((it: any) => Number(it.amount) > 0)
+    .map((it: any) => it.resource_address);
+
+  return {
+    nftCollections,
+    resourceAddresses: [...heldFungibles, ...nftCollections.map((c) => c.resource_address)],
+    truncated: Boolean(fungibles?.next_cursor || nonFungibles?.next_cursor),
+  };
+}
+
+/** NFT collections held by an account. See getAccountHoldings. */
+export async function getAccountNftHoldings(account: string): Promise<NftCollectionHolding[]> {
+  return (await getAccountHoldings(account)).nftCollections;
 }

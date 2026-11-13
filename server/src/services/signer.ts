@@ -94,6 +94,30 @@ async function deriveSignerAddress(): Promise<string> {
 }
 
 /**
+ * Every address that is the signer's own account: the configured one and the
+ * one BOT_PRIVATE_KEY actually derives to (they match once assertSignerCustody
+ * has passed, but a caller deciding what to publish should not rely on that).
+ * Empty when signing is not configured.
+ *
+ * Unlike deriveSignerAddress this never exits: it throws when a key is set but
+ * cannot be derived, and a caller gating something public on it must treat
+ * that as "is the signer" (fail closed). Local key derivation only, no network.
+ */
+export async function getSignerAccountAddresses(): Promise<string[]> {
+  const addresses = new Set<string>();
+  if (ACCOUNT) addresses.add(ACCOUNT);
+  if (process.env.BOT_PRIVATE_KEY) {
+    addresses.add(
+      await RadixEngineToolkit.Derive.virtualAccountAddressFromPublicKey(
+        getPrivateKey().publicKey(),
+        NETWORK
+      )
+    );
+  }
+  return [...addresses];
+}
+
+/**
  * Prove that BOT_PRIVATE_KEY actually controls the configured account.
  *
  * A configured address states an *intention*; only derivation proves custody.
@@ -123,15 +147,14 @@ export async function assertSignerCustody(): Promise<void> {
     process.exit(1);
   }
 
-  // The treasury holds prizes and the minter badge. It may legitimately be a
-  // wallet the server cannot sign for (gift-only), so a mismatch warns rather
-  // than blocks — but it does mean no automated withdrawal from it can work.
+  // The published prize account must not be this hot signing account, which
+  // also holds the minter badge. GET /api/vault/nfts refuses to list it; say so
+  // at boot rather than leaving the operator to find an empty page.
   const treasury = process.env.NFT_TREASURY_ACCOUNT;
-  if (treasury && treasury !== derived) {
-    console.warn("[signer] ⚠ NFT_TREASURY_ACCOUNT is not the signing account —");
-    console.warn(`[signer]   treasury = ${treasury}`);
-    console.warn(`[signer]   signer   = ${derived}`);
-    console.warn("[signer]   the server cannot move anything out of that treasury.");
+  if (treasury && treasury === derived) {
+    console.warn("[signer] ⚠ NFT_TREASURY_ACCOUNT is the signing account —");
+    console.warn(`[signer]   treasury = signer = ${derived}`);
+    console.warn("[signer]   GET /api/vault/nfts will not publish it. Point it at a separate prize account, or unset it.");
   }
 
   console.log(`[signer] ✓ custody verified — signing as ${derived}`);

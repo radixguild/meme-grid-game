@@ -4,8 +4,9 @@ import { adminAuth } from "../middleware/admin-auth";
 import { requireAuth } from "../middleware/require-auth";
 import { getDb } from "../db/connection";
 import { getPendingRewards, getRewardHistory, distributeTournamentPrizes } from "../game/rewards";
-import { getAccountNftHoldings } from "../services/gateway";
+import { getAccountHoldings } from "../services/gateway";
 import { filterAllowedPrizeCollections } from "../services/prize-allowlist";
+import { refuseIfSigner, refuseIfHoldsCustodyBadge, type TreasuryRefusal } from "../services/treasury-guard";
 
 const router = Router();
 
@@ -189,36 +190,59 @@ router.post("/vault/tournament", adminAuth, (req, res) => {
   }
 });
 
-// GET /api/vault/nfts — public NFT prize pool (live treasury holdings).
-// The treasury is the account the community gifts NFTs to; the server's
-// signer controls it, so pooled NFTs can later be raffled out on-chain.
-// 5-min cache keeps Gateway traffic negligible under player load.
+// GET /api/vault/nfts — public listing of the operator-held prize account.
+// The server holds no key to that account and nothing here moves anything out
+// of it. 5-min cache keeps Gateway traffic negligible under player load.
 let nftPoolCache: { at: number; payload: unknown } | null = null;
 const NFT_POOL_TTL_MS = 5 * 60 * 1000;
 
+const EMPTY_POOL = { ok: true, treasury_address: null, collections: [], total_nfts: 0 } as const;
+
+/** Test hook: the cache is module state and outlives a single test case. */
+export function resetNftPoolCacheForTests(): void {
+  nftPoolCache = null;
+}
+
+function refuseTreasury(reason: TreasuryRefusal): typeof EMPTY_POOL {
+  console.warn(`[vault] not publishing NFT_TREASURY_ACCOUNT (${reason})`);
+  // Cached like a good answer, so a refused account costs one check per TTL.
+  nftPoolCache = { at: Date.now(), payload: EMPTY_POOL };
+  return EMPTY_POOL;
+}
+
 router.get("/vault/nfts", async (_req, res) => {
-  // NFT_TREASURY_ACCOUNT only — deliberately NO fallback to RADIX_MAINNET_ADDRESS.
-  // That var is the signer's *intended* account and is not proof the server holds
-  // its key; publishing it as a donation address once pointed the public "gift an
-  // NFT" call at an account we could not sign for. The treasury must be declared
-  // explicitly, and must be an account whose key the server actually controls
-  // (verify: derive virtualAccountAddressFromPublicKey(BOT_PRIVATE_KEY) == it).
+  // NFT_TREASURY_ACCOUNT only — deliberately NO fallback to RADIX_MAINNET_ADDRESS,
+  // the signer's own account. The address is published only after
+  // services/treasury-guard.ts has ruled out the signer and any account holding
+  // a known custody badge; anything unproven publishes nothing.
   const treasury = process.env.NFT_TREASURY_ACCOUNT || null;
 
   if (!treasury) {
-    res.json({ ok: true, treasury_address: null, collections: [], total_nfts: 0 });
+    res.json(EMPTY_POOL);
     return;
   }
   if (nftPoolCache && Date.now() - nftPoolCache.at < NFT_POOL_TTL_MS) {
     res.json(nftPoolCache.payload);
     return;
   }
+
+  const signerRefusal = await refuseIfSigner(treasury);
+  if (signerRefusal) {
+    res.json(refuseTreasury(signerRefusal));
+    return;
+  }
+
   try {
-    // The public prize pool must never surface or count a resource (e.g. a
-    // custody badge) that isn't explicitly allowlisted, even if the treasury
-    // happens to hold it. Fails closed: empty allowlist → empty pool.
+    const holdings = await getAccountHoldings(treasury);
+    const badgeRefusal = refuseIfHoldsCustodyBadge(holdings);
+    if (badgeRefusal) {
+      res.json(refuseTreasury(badgeRefusal));
+      return;
+    }
+    // The public prize pool must never surface or count a resource that isn't
+    // explicitly allowlisted. Fails closed: empty allowlist → empty pool.
     // docs/PROJECT-STATE.md item 16.
-    const collections = filterAllowedPrizeCollections(await getAccountNftHoldings(treasury));
+    const collections = filterAllowedPrizeCollections(holdings.nftCollections);
     const payload = {
       ok: true,
       treasury_address: treasury,
@@ -228,8 +252,9 @@ router.get("/vault/nfts", async (_req, res) => {
     nftPoolCache = { at: Date.now(), payload };
     res.json(payload);
   } catch {
-    // Gateway hiccup: serve stale cache if we have one, else empty-but-ok
-    res.json(nftPoolCache?.payload ?? { ok: true, treasury_address: treasury, collections: [], total_nfts: 0 });
+    // Gateway hiccup: serve the last checked answer if we have one. Without
+    // one the account is unchecked, so publish nothing rather than the address.
+    res.json(nftPoolCache?.payload ?? EMPTY_POOL);
   }
 });
 
