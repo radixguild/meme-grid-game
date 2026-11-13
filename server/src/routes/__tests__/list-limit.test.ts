@@ -13,6 +13,7 @@ import type { createApp as CreateApp } from "../../app";
 import { getDb, closeDb } from "../../db/connection";
 import { runMigrations } from "../../db/migrations/runner";
 import { parseLimit } from "../../middleware/validate";
+import { PublicKey, RadixEngineToolkit, NetworkId } from "@radixdlt/radix-engine-toolkit";
 
 const GUEST = "guest_listlimit";
 
@@ -34,9 +35,23 @@ describe("parseLimit", () => {
 
 let baseUrl = "";
 let server: ReturnType<ReturnType<typeof CreateApp>["listen"]>;
+/**
+ * 30 real mainnet account addresses (the leaderboard lists accounts only).
+ * Derived from fixed, obviously-fake public keys, as in fixtures/addresses.ts:
+ * no private key exists for any of them.
+ */
+let ACCOUNTS: string[] = [];
 
 describe("list routes never return an unbounded page", () => {
   before(async () => {
+    ACCOUNTS = await Promise.all(
+      Array.from({ length: 30 }, (_, i) =>
+        RadixEngineToolkit.Derive.virtualAccountAddressFromPublicKey(
+          new PublicKey.Ed25519(new Uint8Array(32).fill(i + 40)),
+          NetworkId.Mainnet,
+        ),
+      ),
+    );
     runMigrations(getDb());
     const { createApp } = await import("../../app");
     server = createApp().listen(0);
@@ -56,7 +71,7 @@ describe("list routes never return an unbounded page", () => {
 
   it("GET /api/leaderboard?limit=-1 returns at most the default page", async () => {
     const insert = getDb().prepare("INSERT INTO players (radix_address, xp) VALUES (?, ?)");
-    for (let i = 0; i < 30; i++) insert.run(`guest_lb${i}`, i);
+    ACCOUNTS.forEach((address, i) => insert.run(address, i + 1));
     for (const q of ["-1", "-1000", "0"]) {
       const res = await fetch(`${baseUrl}/api/leaderboard?limit=${q}`);
       assert.equal(res.status, 200);
