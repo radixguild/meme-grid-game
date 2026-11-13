@@ -42,6 +42,19 @@ export function loadDeployState(): Record<string, any> {
   catch { return {}; }
 }
 
+/**
+ * Like loadDeployState, for a caller that must fail closed: throws when the file
+ * is missing, unreadable, or not a JSON object, where loadDeployState returns {}.
+ * Read-only.
+ */
+export function readDeployStateStrict(file: string = DEPLOY_STATE_PATH): Record<string, unknown> {
+  const parsed: unknown = JSON.parse(fs.readFileSync(file, "utf8"));
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("deploy-state.json is not a JSON object");
+  }
+  return parsed as Record<string, unknown>;
+}
+
 export function saveDeployState(updates: Record<string, any>): Record<string, any> {
   const current = loadDeployState();
   const merged = { ...current, ...updates, _updated: new Date().toISOString() };

@@ -16,11 +16,8 @@ delete process.env.ADMIN_TOKEN_EXPIRES_AT;
 delete process.env.VAULT_COMPONENT;
 delete process.env.MEME_RESOURCE;
 
-// Loaded here, statically, so ESM import hoisting runs the env loader BEFORE the
-// ADMIN_TOKEN assignment above. The loader reads secrets.env with override:true,
-// so on a box with a real secrets.env, a first load after the assignment (via
-// the dynamic app import below) would replace the test's token.
-import "../../config/load-env";
+// Test runs never load the operator's env files (config/load-env.ts), so the
+// ADMIN_TOKEN above is the one the app sees, on any machine.
 import { describe, it, before, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
 import type { AddressInfo } from "node:net";
