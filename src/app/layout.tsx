@@ -35,7 +35,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "MEME GRID — Web3 Dice Game",
-    description: `8x8 grid, ${CELL_TYPE_COUNT} cell types, combos up to 10x, ${OBTAINABLE_NFT_COUNT} NFTs to earn. Play now on Radix.`,
+    description: `8x8 grid, ${CELL_TYPE_COUNT} cell types, combos up to x4, ${OBTAINABLE_NFT_COUNT} NFTs to earn. Play now on Radix.`,
   },
 };
 

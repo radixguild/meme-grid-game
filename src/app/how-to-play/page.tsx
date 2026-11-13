@@ -62,7 +62,7 @@ export default function HowToPlayPage() {
           <BonusRow label="Row / Column" reward="+25 pts, +30 XP" />
           <BonusRow label="Diagonal" reward="+50 pts, +60 XP" />
           <BonusRow label="2 lines combo" reward="x2.5 multiplier!" />
-          <BonusRow label="3+ lines combo" reward="x4-10 multiplier!" />
+          <BonusRow label="3 lines combo" reward="x4 multiplier!" />
           <BonusRow label="Four Corners" reward="+30 pts" />
           <BonusRow label="Full Border" reward="+100 pts" />
           <BonusRow label="X Pattern" reward="+80 pts" />
@@ -102,7 +102,7 @@ export default function HowToPlayPage() {
       {/* Streaks */}
       <Section title="Daily Streaks" emoji="&#x1F525;">
         <p className="text-sm text-gray-400 mb-4">
-          Play every day for escalating rewards. Miss a day? You lose 1 streak level — not a full reset.
+          Check in every day to unlock power-ups. Miss a day? You lose 1 streak level — not a full reset.
         </p>
         <div className="space-y-1">
           {STREAK_MILESTONES.map((m) => (

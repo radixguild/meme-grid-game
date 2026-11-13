@@ -256,8 +256,7 @@ export default function ShopPage() {
 
           <div className="text-xs text-gray-500 leading-relaxed text-center">
             Your ROLLS balance is unaffected and the game is fully playable with it.
-            Leveling up still pays ROLLS &mdash; daily check-ins and streaks pay XP bonuses
-            and power-ups, not ROLLS.
+            Leveling up still pays ROLLS &mdash; daily streaks unlock power-ups, not ROLLS.
           </div>
 
           {/* Phase indicator */}
