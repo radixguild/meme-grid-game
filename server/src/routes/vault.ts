@@ -195,12 +195,20 @@ router.post("/vault/tournament", adminAuth, (req, res) => {
 // of it. 5-min cache keeps Gateway traffic negligible under player load.
 let nftPoolCache: { at: number; payload: unknown } | null = null;
 const NFT_POOL_TTL_MS = 5 * 60 * 1000;
+// When the Gateway fails, the last checked answer is served only until it is
+// this old; after that the account counts as unchecked and nothing is published.
+const NFT_POOL_STALE_MAX_MS = 2 * NFT_POOL_TTL_MS;
 
 const EMPTY_POOL = { ok: true, treasury_address: null, collections: [], total_nfts: 0 } as const;
 
 /** Test hook: the cache is module state and outlives a single test case. */
 export function resetNftPoolCacheForTests(): void {
   nftPoolCache = null;
+}
+
+/** Test hook: make the cached answer `ms` older than it is. */
+export function ageNftPoolCacheForTests(ms: number): void {
+  if (nftPoolCache) nftPoolCache.at -= ms;
 }
 
 function refuseTreasury(reason: TreasuryRefusal): typeof EMPTY_POOL {
@@ -252,9 +260,10 @@ router.get("/vault/nfts", async (_req, res) => {
     nftPoolCache = { at: Date.now(), payload };
     res.json(payload);
   } catch {
-    // Gateway hiccup: serve the last checked answer if we have one. Without
+    // Gateway hiccup: serve the last checked answer while it is recent. Without
     // one the account is unchecked, so publish nothing rather than the address.
-    res.json(nftPoolCache?.payload ?? EMPTY_POOL);
+    const cached = nftPoolCache;
+    res.json(cached && Date.now() - cached.at < NFT_POOL_STALE_MAX_MS ? cached.payload : EMPTY_POOL);
   }
 });
 
