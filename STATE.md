@@ -8,8 +8,9 @@ citations, deploy records and a working history that are only useful with the fu
 history in hand. Code comments that cite "PROJECT-STATE item N" refer to it. This page carries
 the conclusions, not the derivation.
 
-_Last written: 15 Nov 2026. On that date HQ checked the deploy facts in "Right now" (PR #12 and
-#13 deployed 2026-11-13; live site on `main` at `d1aae0d`) and the direction and next steps. The
+_Last written: 15 Nov 2026. On that date the deploy facts in "Right now" (PR #12 and #13
+deployed 2026-11-13; live site on `main` at `d1aae0d`) and the direction and next steps were
+checked. The
 rest of the note below is the earlier header and was not re-read on 15 Nov 2026._
 
 _Earlier header (2026-11-07, AEDT). Re-read on 2026-11-06: the deployed commit, the live site's public health endpoint,
