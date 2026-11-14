@@ -8,7 +8,12 @@ citations, deploy records and a working history that are only useful with the fu
 history in hand. Code comments that cite "PROJECT-STATE item N" refer to it. This page carries
 the conclusions, not the derivation.
 
-_Last written: 2026-11-07 (AEDT). Re-read on 2026-11-06: the deployed commit, the live site's public health endpoint,
+_Last written: 15 Nov 2026. On that date the deploy facts in "Right now" (PR #12 and #13
+deployed 2026-11-13; live site on `main` at `d1aae0d`) and the direction and next steps were
+checked. The
+rest of the note below is the earlier header and was not re-read on 15 Nov 2026._
+
+_Earlier header (2026-11-07, AEDT). Re-read on 2026-11-06: the deployed commit, the live site's public health endpoint,
 `GET /api/token/info`, `GET /api/vault/nfts`, the response headers and `/gift`; and, on the
 Radix Gateway (ledger state version 567581462), the NFT collection's supply and the v1-vault
 entry. Everything else stands as written on 2026-10-13 against the live site's public API, the
@@ -17,9 +22,24 @@ deployed commit and `docs/PROJECT-STATE.md`, and was not re-read on 2026-11-06. 
 in "Deployed build"; nothing else was re-read), and for code changes on `main` that are not
 yet deployed (marked "not yet deployed" below)._
 
-## Right now *(as of 2026-11-06, except where a line gives a later date)*
+## Right now *(as of 2026-11-15, except where a line gives a different date)*
 
-- **Deployed build.** Commit `dad57e5157ac5bd49ef58e2a4d97bfd80b44df02` of this repository was
+- **Deployed build.** The live site runs `main` at commit `d1aae0d` (PR #13, post-deploy
+  hardening: test environment isolation, vault listing fails closed). It was deployed on
+  2026-11-13 at about 06:18 UTC. PR #12 (pre-launch safety) was deployed the same day at about
+  05:19 UTC. Nothing on `main` is waiting to be deployed as of 2026-11-15.
+- **Direction (owner, 2026-11-13).** Launch MEME GRID as a minimal, honest stack test: prove the
+  stack can do the job or not, and why. Prizes follow effort rules and are signed by a person.
+  No server key signs prizes. No raffles.
+- **Next (planned, no dates set).** Follow-ups from the #13 review (a small hardening PR). A
+  dedicated prize account set up by the operator. A launch brief for contributors.
+- **The prize-vault blueprint is not needed for this launch path**, because awards are signed
+  by hand.
+
+> Superseded 2026-11-15: the "Deployed build" entry below describes the #12 deploy only. The
+> live site now runs `d1aae0d`. Its read-back values are kept as a record of 2026-11-13.
+
+- **Earlier deployed build (#12).** Commit `dad57e5157ac5bd49ef58e2a4d97bfd80b44df02` of this repository was
   deployed to the live site on 2026-11-13 (server restarted at about 05:19 UTC). Read back by the
   owner that day after the restart: migration 017 applied, `NFT_MINT_DAILY_CAP` set to 10, no
   guest id on the public leaderboard, `GET /api/vault/nfts` returning `treasury_address: null`,
@@ -32,8 +52,8 @@ yet deployed (marked "not yet deployed" below)._
   endpoint reported 43 player rows and 16 boards ever started on 2026-11-13, the same 16 as on
   2026-10-04, so no new board has been started since then; seven NFTs have been minted in total (the collection's
   supply on the Radix Gateway is 7, none burned). Currently there is no marketing or community
-  programme. Next: the v2 vault and prize vault deploy, an operator sitting not yet
-  scheduled. The repository is published as a working reference of what can be built on Radix.
+  programme. (Superseded 2026-11-15: the old "Next: the v2 vault and prize vault deploy" line is
+  out of date; see "Next" above.) The repository is published as a working reference of what can be built on Radix.
 - **One pseudonymous developer (`bigdev`), working with AI assistance.** No company, no token
   sale, no treasury beyond the accounts named in [`PROVENANCE.md`](./PROVENANCE.md).
   Independent of, and not backed, endorsed or affiliated with, the Radix Foundation or RDX Works.
@@ -51,7 +71,7 @@ yet deployed (marked "not yet deployed" below)._
   route also publishes no address at all when `NFT_TREASURY_ACCOUNT` is the server's signing
   account or holds a known custody badge, or when it cannot check either (production returns
   `treasury_address: null`, read back that day), and `/tokenomics` no longer shows a prize-pool
-  or donation section. On `main` (not yet deployed) that check also refuses when
+  or donation section. Since the #13 deploy (2026-11-13) that check also refuses when
   `deploy-state.json` cannot be read or a Gateway reply is malformed, reads every page of the
   account's holdings up to a page limit instead of refusing any account with more than one
   page, and serves its last answer through a Gateway outage for at most ten minutes.
@@ -78,7 +98,8 @@ yet deployed (marked "not yet deployed" below)._
 ## Switched off or not built
 
 - **XRD → ROLLS purchase.** Off. The v2 vault blueprint (`scrypto/meme-token`) is built and its
-  ledger tests run in CI; deploying it is an operator sitting that has not happened. The deploy
+  ledger tests run in CI; deploying it has not happened and is not needed for the current launch
+  path (awards are signed by hand). The deploy
   script (`server/src/services/deploy-meme-token.ts`) refuses to run on mainnet unless three
   distinct custody accounts are set — owner cold, owner backup, admin — none of them the
   deploying key. That rule is what the v1 vault failure produced.
@@ -118,7 +139,8 @@ yet deployed (marked "not yet deployed" below)._
   collection's minter badge. Until the 2026-11-13 deploy it was also what `/tokenomics` and
   `GET /api/vault/nfts` published as the prize-pool treasury; since then neither publishes it.
   The key and the badge it holds are unchanged. A dedicated prize vault that cannot hold badges
-  is the planned fix and is not done. Do not send anything of value to that account expecting a
+  was the earlier planned fix and is not done; as of 2026-11-15 the plan is a dedicated prize
+  account set up by the operator, with awards signed by a person. Do not send anything of value to that account expecting a
   vault to hold it.
 - **The MEME token's and the NFT collection's `dapp_definitions` metadata is locked** to the
   Radix Guild's dApp definition, the game's original home, and can only change with a redeploy.
