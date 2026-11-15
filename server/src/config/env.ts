@@ -10,7 +10,7 @@
  * with a cryptic "server misconfigured" 500.
  */
 
-import "./load-env";
+import { testRunMarker } from "./load-env";
 
 // ── Required-var validation ─────────────────────────────────────────
 
@@ -113,6 +113,13 @@ export function applyEnvCheck(): { disabledFeatures: string[] } {
       result.fatal.join(", ")
     );
     console.error("[config]   set them in .env or secrets.env and restart.");
+    const marker = testRunMarker();
+    if (marker) {
+      console.error(
+        `[config]   .env and secrets.env were NOT loaded: ${marker} marks this process as a test run. ` +
+          "Start the server from a shell that is not a test runner's child, or set NODE_ENV=production.",
+      );
+    }
     process.exit(1);
   }
 

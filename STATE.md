@@ -27,12 +27,26 @@ yet deployed (marked "not yet deployed" below)._
 - **Deployed build.** The live site runs `main` at commit `d1aae0d` (PR #13, post-deploy
   hardening: test environment isolation, vault listing fails closed). It was deployed on
   2026-11-13 at about 06:18 UTC. PR #12 (pre-launch safety) was deployed the same day at about
-  05:19 UTC. Nothing on `main` is waiting to be deployed as of 2026-11-15.
+  05:19 UTC. As of 2026-11-15 nothing on `main` was waiting to be deployed; the change in the
+  next entry was merged to `main` after that date and has not been deployed.
+- **On `main` (not yet deployed): the #13 review follow-ups.** Three changes, each with tests in
+  `server/`. (1) `GET /api/vault/nfts` runs one holdings check at a time (concurrent requests
+  share it), starts no new check for 30 seconds after one fails, and each call through the
+  server's shared Gateway client (`services/gateway.ts`) gives up after 15 seconds; the signer
+  and the wallet-login check make their own Gateway calls and are unchanged. This matters only once `NFT_TREASURY_ACCOUNT` names an account other than the
+  signer; on 2026-11-13 production returned `treasury_address: null`, because the route refused
+  the signer account before any Gateway read. (2) With `NODE_ENV=production` the server always
+  loads `.env` and `secrets.env`, even when a test-runner marker is present in its environment
+  (the pm2 config sets `NODE_ENV=production`). Run the server tests with `NODE_ENV` unset: with
+  it set to `production` they load the operator's files instead of their own values. (3) The
+  page-limit test now fails instead of hanging if the limit is removed. Also added:
+  `.github/dependabot.yml` (weekly npm and GitHub Actions updates) and `minimatch` pinned to
+  `11.0.3` for `@typescript-eslint/typescript-estree` (development dependency only).
 - **Direction (owner, 2026-11-13).** Launch MEME GRID as a minimal, honest stack test: prove the
   stack can do the job or not, and why. Prizes follow effort rules and are signed by a person.
   No server key signs prizes. No raffles.
-- **Next (planned, no dates set).** Follow-ups from the #13 review (a small hardening PR). A
-  dedicated prize account set up by the operator. A launch brief for contributors.
+- **Next (planned, no dates set).** Deploy the #13 review follow-ups (above). A dedicated prize
+  account set up by the operator. A launch brief for contributors.
 - **The prize-vault blueprint is not needed for this launch path**, because awards are signed
   by hand.
 

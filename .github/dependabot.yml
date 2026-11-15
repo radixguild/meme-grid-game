@@ -1,0 +1,56 @@
+# Dependabot version updates: npm for both package directories and the GitHub
+# Actions the workflows use, checked weekly. Security alerts and security update
+# PRs are a separate repository setting and are not affected by this file.
+#
+# Not listed on purpose:
+#   - scrypto/ (Cargo): the blueprints build against the Radix Scrypto 1.3.1
+#     toolchain, pinned together with the CLI version in .github/workflows/ci.yml.
+#     A routine crate bump there is a deliberate, tested change, not a weekly PR.
+#
+# Every update arrives as a pull request and goes through the same CI and review
+# as any other change; nothing here merges or deploys by itself.
+version: 2
+updates:
+  # Root: the Next.js web app.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    # Wait before proposing a release that is only days old, so a bad publish
+    # has time to be caught and pulled. Applies to version updates only.
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+    groups:
+      web-minor-and-patch:
+        update-types: [minor, patch]
+
+  # server/: the Express API and mint worker (a separate package and lockfile).
+  - package-ecosystem: npm
+    directory: /server
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+    groups:
+      server-minor-and-patch:
+        update-types: [minor, patch]
+
+  # Workflow actions are pinned to commit SHAs with a version comment; Dependabot
+  # updates both together.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(ci)"
