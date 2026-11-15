@@ -13,7 +13,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { isTestRun, loadEnvFiles, OPERATOR_ENV_FILES } from "../load-env";
+import { isTestRun, testRunMarker, loadEnvFiles, OPERATOR_ENV_FILES } from "../load-env";
 
 const LOAD_ENV = path.resolve(__dirname, "../load-env.ts");
 const SERVER_DIR = path.resolve(__dirname, "../../..");
@@ -89,6 +89,20 @@ describe("config/load-env", () => {
     assert.equal(isTestRun({}, ["--enable-source-maps", "--test"]), true);
     assert.equal(isTestRun({}, []), false, "node dist/index.js");
     assert.equal(isTestRun({ NODE_ENV: "production" }, ["--enable-source-maps"]), false);
+    assert.equal(isTestRun({ NODE_ENV: "test", NODE_TEST_CONTEXT: "child-v8" }, []), true);
+  });
+
+  it("names the marker that makes a process a test run", () => {
+    assert.equal(testRunMarker({ NODE_TEST_CONTEXT: "child-v8" }, []), "NODE_TEST_CONTEXT");
+    assert.equal(testRunMarker({}, ["--test"]), "--test");
+    assert.equal(testRunMarker({}, []), null);
+  });
+
+  it("NODE_ENV=production is never a test run, whatever marker it carries", () => {
+    // A production process that inherited a runner's marker must still load its files.
+    assert.equal(isTestRun({ NODE_ENV: "production", NODE_TEST_CONTEXT: "child-v8" }, []), false);
+    assert.equal(isTestRun({ NODE_ENV: "production" }, ["--test"]), false);
+    assert.equal(testRunMarker({ NODE_ENV: "production", NODE_TEST_CONTEXT: "child-v8" }, ["--test"]), null);
   });
 
   it("loads only this project's own files on a normal start", () => {
@@ -123,6 +137,22 @@ describe("config/load-env", () => {
         privateKeyKept: false,
         signerAddressKept: false,
         networkKept: true, // .env never overrides a value already set
+      });
+    },
+  );
+
+  it(
+    "a production start loads the planted files even with a test-runner marker inherited",
+    { skip: OPERATOR_FILES_PRESENT && "operator env files present; a test does not load them" },
+    () => {
+      const env: NodeJS.ProcessEnv = { ...process.env, ...TEST_VALUES, NODE_ENV: "production", NODE_TEST_CONTEXT: "child-v8" };
+      assert.deepEqual(childSees(env), {
+        secretsProbeLoaded: true,
+        envProbeLoaded: true,
+        adminTokenKept: false,
+        privateKeyKept: false,
+        signerAddressKept: false,
+        networkKept: true,
       });
     },
   );
