@@ -14,7 +14,7 @@
     "@radixdlt/radix-engine-toolkit": "1.0.6",
     "@radixdlt/rola": "2.1.0",
     "@sentry/node": "10.66.0",
-    "better-sqlite3": "11.10.0",
+    "better-sqlite3": "13.0.3",
     "cors": "2.8.6",
     "dotenv": "17.4.2",
     "express": "5.2.1"
