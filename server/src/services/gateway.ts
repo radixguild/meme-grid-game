@@ -8,11 +8,26 @@ interface GatewayResponse {
   error?: string;
 }
 
+/**
+ * Longest one Gateway call may take, reply body included, before it is aborted
+ * and rejects with a TimeoutError. Without a bound, a Gateway that accepts the
+ * connection and never answers holds the calling request open indefinitely.
+ */
+export const GATEWAY_TIMEOUT_MS = 15_000;
+
+let gatewayTimeoutMs = GATEWAY_TIMEOUT_MS;
+
+/** Test hook: shorten (or restore, with no argument) the Gateway call timeout. */
+export function setGatewayTimeoutForTests(ms: number = GATEWAY_TIMEOUT_MS): void {
+  gatewayTimeoutMs = ms;
+}
+
 async function gatewayPost(endpoint: string, body: any): Promise<any> {
   const res = await fetch(`${GATEWAY_URL}${endpoint}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(gatewayTimeoutMs),
   });
   if (!res.ok) throw new Error(`Gateway error: ${res.status}`);
   return res.json();
@@ -73,6 +88,7 @@ export async function getNetworkStatus(): Promise<any> {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: "{}",
+    signal: AbortSignal.timeout(gatewayTimeoutMs),
   });
   if (!res.ok) throw new Error(`Gateway status error: ${res.status}`);
   return res.json();

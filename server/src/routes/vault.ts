@@ -198,24 +198,85 @@ const NFT_POOL_TTL_MS = 5 * 60 * 1000;
 // When the Gateway fails, the last checked answer is served only until it is
 // this old; after that the account counts as unchecked and nothing is published.
 const NFT_POOL_STALE_MAX_MS = 2 * NFT_POOL_TTL_MS;
+// After a check fails (Gateway error or timeout), no new check starts for this
+// long; requests in the window get the same stale-or-empty answer without a
+// Gateway call. Without it, every page view re-runs a chain of up to 39 calls
+// against a Gateway that is already failing.
+const NFT_POOL_RETRY_AFTER_MS = 30 * 1000;
 
 const EMPTY_POOL = { ok: true, treasury_address: null, collections: [], total_nfts: 0 } as const;
+
+// The check in flight, if any. Requests that arrive while it runs share its
+// answer instead of starting a check of their own.
+let nftPoolInflight: Promise<unknown> | null = null;
+// When the last check failed; cleared by any completed check.
+let nftPoolFailedAt: number | null = null;
 
 /** Test hook: the cache is module state and outlives a single test case. */
 export function resetNftPoolCacheForTests(): void {
   nftPoolCache = null;
+  nftPoolInflight = null;
+  nftPoolFailedAt = null;
 }
 
-/** Test hook: make the cached answer `ms` older than it is. */
+/** Test hook: make the cached answer and the last failure `ms` older than they are. */
 export function ageNftPoolCacheForTests(ms: number): void {
   if (nftPoolCache) nftPoolCache.at -= ms;
+  if (nftPoolFailedAt !== null) nftPoolFailedAt -= ms;
 }
 
 function refuseTreasury(reason: TreasuryRefusal): typeof EMPTY_POOL {
   console.warn(`[vault] not publishing NFT_TREASURY_ACCOUNT (${reason})`);
   // Cached like a good answer, so a refused account costs one check per TTL.
   nftPoolCache = { at: Date.now(), payload: EMPTY_POOL };
+  nftPoolFailedAt = null;
   return EMPTY_POOL;
+}
+
+/**
+ * The answer when the account could not be checked just now: the last checked
+ * answer while it is recent. Without one the account is unchecked, so publish
+ * nothing rather than the address.
+ */
+function answerWithoutCheck(): unknown {
+  const cached = nftPoolCache;
+  return cached && Date.now() - cached.at < NFT_POOL_STALE_MAX_MS ? cached.payload : EMPTY_POOL;
+}
+
+/**
+ * One full check of `treasury`. A Gateway failure does not reject: it is
+ * remembered (see NFT_POOL_RETRY_AFTER_MS) and answered by answerWithoutCheck().
+ */
+async function checkNftPool(treasury: string): Promise<unknown> {
+  const signerRefusal = await refuseIfSigner(treasury);
+  if (signerRefusal) return refuseTreasury(signerRefusal);
+
+  try {
+    const holdings = await getAccountHoldings(treasury);
+    const badgeRefusal = refuseIfHoldsCustodyBadge(holdings);
+    if (badgeRefusal) return refuseTreasury(badgeRefusal);
+    // The public prize pool must never surface or count a resource that isn't
+    // explicitly allowlisted. Fails closed: empty allowlist → empty pool.
+    // docs/PROJECT-STATE.md item 16.
+    const collections = filterAllowedPrizeCollections(holdings.nftCollections);
+    const payload = {
+      ok: true,
+      treasury_address: treasury,
+      collections,
+      total_nfts: collections.reduce((sum, c) => sum + c.count, 0),
+    };
+    nftPoolCache = { at: Date.now(), payload };
+    nftPoolFailedAt = null;
+    return payload;
+  } catch (err) {
+    nftPoolFailedAt = Date.now();
+    console.warn(
+      `[vault] NFT prize account check failed, retrying in ${NFT_POOL_RETRY_AFTER_MS / 1000}s: ${
+        err instanceof Error ? err.message : String(err)
+      }`,
+    );
+    return answerWithoutCheck();
+  }
 }
 
 router.get("/vault/nfts", async (_req, res) => {
@@ -233,38 +294,20 @@ router.get("/vault/nfts", async (_req, res) => {
     res.json(nftPoolCache.payload);
     return;
   }
-
-  const signerRefusal = await refuseIfSigner(treasury);
-  if (signerRefusal) {
-    res.json(refuseTreasury(signerRefusal));
+  if (nftPoolFailedAt !== null && Date.now() - nftPoolFailedAt < NFT_POOL_RETRY_AFTER_MS) {
+    res.json(answerWithoutCheck());
     return;
   }
 
-  try {
-    const holdings = await getAccountHoldings(treasury);
-    const badgeRefusal = refuseIfHoldsCustodyBadge(holdings);
-    if (badgeRefusal) {
-      res.json(refuseTreasury(badgeRefusal));
-      return;
-    }
-    // The public prize pool must never surface or count a resource that isn't
-    // explicitly allowlisted. Fails closed: empty allowlist → empty pool.
-    // docs/PROJECT-STATE.md item 16.
-    const collections = filterAllowedPrizeCollections(holdings.nftCollections);
-    const payload = {
-      ok: true,
-      treasury_address: treasury,
-      collections,
-      total_nfts: collections.reduce((sum, c) => sum + c.count, 0),
-    };
-    nftPoolCache = { at: Date.now(), payload };
-    res.json(payload);
-  } catch {
-    // Gateway hiccup: serve the last checked answer while it is recent. Without
-    // one the account is unchecked, so publish nothing rather than the address.
-    const cached = nftPoolCache;
-    res.json(cached && Date.now() - cached.at < NFT_POOL_STALE_MAX_MS ? cached.payload : EMPTY_POOL);
+  // Single flight: one check at a time. Cleared only by the check that set it,
+  // so a check that outlives a test-hook reset cannot clear a newer one.
+  if (!nftPoolInflight) {
+    const check: Promise<unknown> = checkNftPool(treasury).finally(() => {
+      if (nftPoolInflight === check) nftPoolInflight = null;
+    });
+    nftPoolInflight = check;
   }
+  res.json(await nftPoolInflight);
 });
 
 export default router;

@@ -38,6 +38,10 @@ let gatewayCalls: string[] = [];
 let gatewayBodies: RequestBody[] = [];
 // A fixed reply, or one chosen per request (path and parsed body).
 let gatewayReply: Reply | ((url: string, body: RequestBody) => Reply) = { status: 200, body: {} };
+// When set, every reply waits for it, so a test can hold a check in flight.
+let gatewayHold: Promise<void> | null = null;
+// When true, requests are recorded and never answered: only the client's timeout ends the call.
+let gatewayHang = false;
 
 const fungibleItems = (resources: string[]) =>
   resources.map((r) => ({ resource_address: r, amount: "1" }));
@@ -79,9 +83,11 @@ const gateway = http.createServer((req, res) => {
   gatewayCalls.push(url);
   let raw = "";
   req.on("data", (chunk) => (raw += chunk));
-  req.on("end", () => {
+  req.on("end", async () => {
     const body = raw ? JSON.parse(raw) : {};
     gatewayBodies.push(body);
+    if (gatewayHang) return;
+    if (gatewayHold) await gatewayHold;
     const reply = typeof gatewayReply === "function" ? gatewayReply(url, body) : gatewayReply;
     res.writeHead(reply.status, { "Content-Type": "application/json" });
     res.end(JSON.stringify(reply.body));
@@ -97,6 +103,7 @@ let resetCache: () => void;
 let ageCache: (ms: number) => void;
 let maxPages = 0;
 let closeDb: () => void;
+let setGatewayTimeout: (ms?: number) => void;
 let loadDeployState: () => Record<string, any>;
 
 type Pool = { treasury_address: string | null; total_nfts: number };
@@ -106,6 +113,8 @@ async function getPool(): Promise<Pool> {
   assert.equal(res.status, 200);
   return (await res.json()) as Pool;
 }
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 describe("GET /api/vault/nfts — treasury guard", () => {
   before(async () => {
@@ -136,6 +145,7 @@ describe("GET /api/vault/nfts — treasury guard", () => {
     resetCache = vault.resetNftPoolCacheForTests;
     ageCache = vault.ageNftPoolCacheForTests;
     maxPages = gatewayModule.MAX_HOLDINGS_PAGES;
+    setGatewayTimeout = gatewayModule.setGatewayTimeoutForTests;
     loadDeployState = signer.loadDeployState;
 
     runMigrations(db.getDb());
@@ -149,13 +159,19 @@ describe("GET /api/vault/nfts — treasury guard", () => {
     gatewayCalls = [];
     gatewayBodies = [];
     gatewayReply = { status: 200, body: entityDetails({}) };
+    gatewayHold = null;
+    gatewayHang = false;
+    setGatewayTimeout();
     process.env.BOT_PRIVATE_KEY = TEST_KEY_HEX;
     process.env.NFT_MINTER_BADGE = MINTER_BADGE;
     delete process.env.NFT_TREASURY_ACCOUNT;
   });
 
   after(async () => {
+    // Drop any request still open, so a hung one fails its own test rather than this hook.
+    server.closeAllConnections();
     await new Promise<void>((resolve) => server.close(() => resolve()));
+    gateway.closeAllConnections();
     await new Promise<void>((resolve) => gateway.close(() => resolve()));
     closeDb();
   });
@@ -268,13 +284,17 @@ describe("GET /api/vault/nfts — treasury guard", () => {
     assert.deepEqual(gatewayCalls, [DETAILS, FUNGIBLES_PAGE]);
   });
 
-  it("does not publish when the holdings run past the page limit", async () => {
+  // The timeout, and the call-count guard in the stub, make a removed page limit
+  // fail this test instead of hanging the suite until the CI job times out.
+  it("does not publish when the holdings run past the page limit", { timeout: 10_000 }, async () => {
     process.env.NFT_TREASURY_ACCOUNT = PRIZE_ACCOUNT;
     let page = 1;
-    gatewayReply = (url) =>
-      url === DETAILS
+    gatewayReply = (url) => {
+      if (gatewayCalls.length > maxPages + 5) return { status: 500, body: { error: "page limit not enforced" } };
+      return url === DETAILS
         ? { status: 200, body: entityDetails({ nfts: [{ resource: PRIZE_COLLECTION, count: 1 }], fungiblesCursor: "next" }) }
         : { status: 200, body: { items: fungibleItems([`resource_rdx1test_spam_${++page}`]), next_cursor: "next" } };
+    };
     assert.deepEqual(await getPool(), EMPTY);
     assert.equal(gatewayCalls.length, maxPages, "stops at the page limit");
   });
@@ -334,5 +354,109 @@ describe("GET /api/vault/nfts — treasury guard", () => {
     process.env.NFT_TREASURY_ACCOUNT = PRIZE_ACCOUNT;
     gatewayReply = { status: 503, body: { error: "down" } };
     assert.deepEqual(await getPool(), EMPTY);
+  });
+
+  // Holds the Gateway's reply while five requests arrive, then releases it. A
+  // late arrival is served from the cache (or the failure window), which costs
+  // no call either, so the call count is the same however the requests interleave.
+  async function fiveRequestsDuringOneHeldCheck(): Promise<Pool[]> {
+    let release!: () => void;
+    gatewayHold = new Promise<void>((resolve) => (release = resolve));
+    try {
+      const pending = Array.from({ length: 5 }, () => getPool());
+      for (let i = 0; gatewayCalls.length === 0 && i < 100; i++) await sleep(50); // the check has started
+      await sleep(300); // the other requests have had time to arrive
+      release();
+      return await Promise.all(pending);
+    } finally {
+      release(); // also on a failed step above, so no request is left held
+    }
+  }
+
+  it("concurrent requests share one check instead of each starting their own", async () => {
+    process.env.NFT_TREASURY_ACCOUNT = PRIZE_ACCOUNT;
+    gatewayReply = { status: 200, body: entityDetails({ nfts: [{ resource: PRIZE_COLLECTION, count: 2 }] }) };
+
+    for (const pool of await fiveRequestsDuringOneHeldCheck()) {
+      assert.equal(pool.treasury_address, PRIZE_ACCOUNT);
+      assert.equal(pool.total_nfts, 2);
+    }
+    assert.equal(gatewayCalls.length, 1, "the five requests cost one check");
+
+    assert.equal((await getPool()).treasury_address, PRIZE_ACCOUNT);
+    assert.equal(gatewayCalls.length, 1, "the next request is served from the cache");
+  });
+
+  it("concurrent requests also share a failed check", async () => {
+    process.env.NFT_TREASURY_ACCOUNT = PRIZE_ACCOUNT;
+    gatewayReply = { status: 503, body: { error: "down" } };
+
+    for (const pool of await fiveRequestsDuringOneHeldCheck()) assert.deepEqual(pool, EMPTY);
+    assert.equal(gatewayCalls.length, 1);
+  });
+
+  it("starts a new check once the previous one has finished", async () => {
+    process.env.NFT_TREASURY_ACCOUNT = PRIZE_ACCOUNT;
+    gatewayReply = { status: 200, body: entityDetails({ nfts: [{ resource: PRIZE_COLLECTION, count: 1 }] }) };
+    await getPool();
+    ageCache(5 * 60 * 1000 + 1000); // past the TTL
+    gatewayReply = { status: 200, body: entityDetails({ nfts: [{ resource: PRIZE_COLLECTION, count: 4 }] }) };
+    assert.equal((await getPool()).total_nfts, 4, "the in-flight slot was freed after the first check");
+    assert.equal(gatewayCalls.length, 2);
+  });
+
+  it("does not repeat a failed check for 30 s, and keeps serving the last good answer", async () => {
+    process.env.NFT_TREASURY_ACCOUNT = PRIZE_ACCOUNT;
+    gatewayReply = { status: 200, body: entityDetails({ nfts: [{ resource: PRIZE_COLLECTION, count: 1 }] }) };
+    assert.equal((await getPool()).treasury_address, PRIZE_ACCOUNT);
+
+    gatewayReply = { status: 503, body: { error: "down" } };
+    ageCache(5 * 60 * 1000 + 1000); // past the TTL: re-checks once, the Gateway fails
+    assert.equal((await getPool()).treasury_address, PRIZE_ACCOUNT, "a recent answer is still served");
+    assert.equal(gatewayCalls.length, 2);
+
+    for (let i = 0; i < 3; i++) {
+      assert.equal((await getPool()).treasury_address, PRIZE_ACCOUNT);
+    }
+    assert.equal(gatewayCalls.length, 2, "no further Gateway calls inside the retry window");
+
+    ageCache(30 * 1000 + 1000); // the retry window is over; the answer is still under twice the TTL
+    await getPool();
+    assert.equal(gatewayCalls.length, 3, "checks again after the window");
+  });
+
+  it("does not repeat a failed check for 30 s when there is nothing to serve", async () => {
+    process.env.NFT_TREASURY_ACCOUNT = PRIZE_ACCOUNT;
+    gatewayReply = { status: 503, body: { error: "down" } };
+    for (let i = 0; i < 4; i++) assert.deepEqual(await getPool(), EMPTY);
+    assert.equal(gatewayCalls.length, 1);
+
+    ageCache(30 * 1000 + 1000);
+    assert.deepEqual(await getPool(), EMPTY);
+    assert.equal(gatewayCalls.length, 2);
+  });
+
+  it("gives up on a Gateway call that never answers and publishes nothing", { timeout: 10_000 }, async () => {
+    process.env.NFT_TREASURY_ACCOUNT = PRIZE_ACCOUNT;
+    gatewayHang = true;
+    setGatewayTimeout(600);
+    const started = Date.now();
+    assert.deepEqual(await getPool(), EMPTY);
+    assert.ok(Date.now() - started < 5000, "returned after the call timeout, not the test timeout");
+    assert.equal(gatewayCalls.length, 1);
+
+    assert.deepEqual(await getPool(), EMPTY);
+    assert.equal(gatewayCalls.length, 1, "the hung check is not retried inside the window");
+  });
+
+  it("serves the last good answer when a re-check hangs", { timeout: 10_000 }, async () => {
+    process.env.NFT_TREASURY_ACCOUNT = PRIZE_ACCOUNT;
+    gatewayReply = { status: 200, body: entityDetails({ nfts: [{ resource: PRIZE_COLLECTION, count: 1 }] }) };
+    await getPool();
+    gatewayHang = true;
+    setGatewayTimeout(600);
+    ageCache(5 * 60 * 1000 + 1000);
+    assert.equal((await getPool()).treasury_address, PRIZE_ACCOUNT);
+    assert.equal(gatewayCalls.length, 2);
   });
 });
