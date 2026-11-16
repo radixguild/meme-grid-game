@@ -85,7 +85,9 @@ interface CheckResult {
 
 function runCustodyCheck(env: Record<string, string | undefined>): CheckResult {
   const result = spawnSync(TSX_BIN, [FIXTURE], {
-    env: { PATH: process.env.PATH, ...env },
+    // NODE_TEST_CONTEXT keeps the child from loading the operator's .env and
+    // secrets.env should signer.ts ever import config/load-env (see isTestRun()).
+    env: { PATH: process.env.PATH, NODE_TEST_CONTEXT: process.env.NODE_TEST_CONTEXT ?? "child-v8", ...env },
     encoding: "utf8",
     timeout: 30_000,
   });
