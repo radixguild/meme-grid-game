@@ -7,14 +7,14 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc && mkdir -p dist/db/migrations && cp src/db/migrations/*.sql dist/db/migrations/",
     "start": "node dist/index.js",
-    "test": "tsx --test --test-force-exit \"src/**/__tests__/*.test.ts\""
+    "test": "env -u NODE_ENV tsx --test --test-force-exit \"src/**/__tests__/*.test.ts\""
   },
   "dependencies": {
     "@radixdlt/babylon-gateway-api-sdk": "1.10.1",
     "@radixdlt/radix-engine-toolkit": "1.0.6",
     "@radixdlt/rola": "2.1.0",
     "@sentry/node": "10.66.0",
-    "better-sqlite3": "11.10.0",
+    "better-sqlite3": "13.0.3",
     "cors": "2.8.6",
     "dotenv": "17.4.2",
     "express": "5.2.1"
