@@ -16,7 +16,7 @@ import { useEffect, useState } from "react";
  *     trial cannot reach the completed board that drops settle on. Levelling up
  *     pays, but that is a long way past the banner.
  *   - "on-chain distribution launches in Phase 2" had no implementation, no date
- *     and no owner — `services/vault.ts` still carries a bare `TODO Phase 2` for
+ *     and no owner — `server/src/routes/vault.ts` still carries a bare `TODO Phase 2` for
  *     it. Promising a launch nothing implements is the thing this banner should
  *     least be doing.
  *
