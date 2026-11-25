@@ -163,6 +163,10 @@ yet deployed (marked "not yet deployed" below)._
 - **The free-ROLLS faucet is mitigated, not closed.** Fabricated addresses are rejected,
   first-time funding needs a proven session, and newly funded wallets per IP per day are capped;
   a real keypair with a real signing flow is bounded only by that cap.
+- **The row-bomb power-up completes cells without counting a roll** (`rolls_used`). This is
+  recorded as open in [`docs/GAME-DESIGN-REVIEW.md`](docs/GAME-DESIGN-REVIEW.md) §1.2, and the
+  `row_bomb` branch of `server/src/routes/powerups.ts` still does not increment the count
+  (re-read 2026-11-25).
 - **Telemetry:** server errors go to Sentry when a DSN is configured. Nothing else is collected
   beyond what the game needs to run.
 

@@ -8,7 +8,7 @@ companion to the [Radix Guild](https://radixguild.com). Apache-2.0.
 > **Read [`STATE.md`](./STATE.md) first.** It says what is live, what is switched off and what is
 > disclosed as a known limit, and it wins over this file wherever the two disagree. The short
 > version: the game is live and playable, the paid economy is off, and the project is
-> maintained, with the v2 vault deploy as the next step.
+> maintained. `STATE.md` lists the next steps.
 
 ## What it is
 
@@ -50,7 +50,8 @@ cd server && cp .env.example .env          # RADIX_NETWORK is the only value the
 npm ci && npm rebuild better-sqlite3 && npm run dev   # Express API on http://localhost:3004
 ```
 
-`server/.env.example` documents every variable. Signing, ROLA and NFT minting switch themselves
+[`docs/CONFIG.md`](docs/CONFIG.md) lists every variable the code reads, with where it is read.
+Signing, ROLA and NFT minting switch themselves
 off when their variable groups are absent, so a bare local server runs the game with no keys.
 `.npmrc` sets `ignore-scripts=true` as supply-chain hardening; the explicit
 `npm rebuild better-sqlite3` builds the one native module the server needs.
@@ -74,9 +75,11 @@ why), so CI on Linux is where a green blueprint result means something.
 src/            Next.js app: pages, components, hooks, the gift-rail address guard
 server/src/     Express API: auth (ROLA, guest ids), game engine, routes, services, SQL migrations
 scrypto/        meme-token (vault) and meme-nfts (collection) blueprints with ledger tests
-docs/           the game design review, the engagement strategy, the v1 vault post-mortem
+docs/           the game design review, the engagement strategy, the v1 vault post-mortem,
+                the config reference (CONFIG.md), the deploy and rollback draft (DEPLOY.md)
 public/         static assets, cell art, the dApp definition well-known file
-.github/        CI (frontend, server, Scrypto) and the gitleaks secret scan
+.github/        CI (frontend, server, Scrypto), the Scrypto build artifact, the gitleaks
+                secret scan, Dependabot
 ```
 
 ## The v1 vault
