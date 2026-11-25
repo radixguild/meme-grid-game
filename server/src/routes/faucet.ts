@@ -67,7 +67,7 @@ router.post("/faucet/:address/claim", validateAddress, requireAuth({ mode: "requ
   }
 
   // Record the claim as pending
-  // Phase 1: actual XRD send is not implemented yet — needs a funded server wallet
+  // No XRD is sent: nothing calls sendXrdManifest or marks a claim 'sent'.
   const result = db.prepare(`
     INSERT INTO faucet_claims (radix_address, amount, status)
     VALUES (?, ?, 'pending')
