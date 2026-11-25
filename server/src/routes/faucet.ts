@@ -9,7 +9,7 @@ const router = Router();
 const FAUCET_AMOUNT = 0.5; // XRD per claim
 const COOLDOWN_DAYS = 7;
 
-// GET /api/faucet/:address/eligible — check if player can record a claim (no XRD is sent yet)
+// GET /api/faucet/:address/eligible — check if player can record a claim (no faucet XRD is sent)
 router.get("/faucet/:address/eligible", validateAddress, requireAuth({ mode: "required-for-wallets" }), (req, res) => {
   const { address } = req.params;
   const db = getDb();
@@ -33,7 +33,7 @@ router.get("/faucet/:address/eligible", validateAddress, requireAuth({ mode: "re
     res.json({
       ok: true,
       eligible: false,
-      reason: `Claim already recorded. XRD distribution is not running, so no XRD has been sent. Next eligible: ${nextEligible}`,
+      reason: `Claim already recorded. This server does not send faucet XRD. Next eligible: ${nextEligible}`,
       next_eligible: nextEligible,
       total_claims: totalClaims,
       faucet_amount: FAUCET_AMOUNT,
@@ -62,7 +62,7 @@ router.post("/faucet/:address/claim", validateAddress, requireAuth({ mode: "requ
   `).get(address, cooldownTs);
 
   if (recentClaim) {
-    res.status(429).json({ ok: false, error: "Faucet cooldown active: a claim is already recorded. XRD distribution is not running, so no XRD has been sent." });
+    res.status(429).json({ ok: false, error: "Faucet cooldown active: a claim is already recorded. This server does not send faucet XRD." });
     return;
   }
 

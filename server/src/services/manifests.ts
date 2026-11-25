@@ -1,7 +1,6 @@
 /**
- * Server-side Radix transaction manifest builders.
- * Used for: minting NFTs, distributing tokens. Also holds an XRD send builder for the faucet,
- * which nothing calls yet.
+ * Server-side Radix transaction manifest builders: ROLLS purchases, XRD sends, token sends and
+ * NFT mints. Nothing imports this module at present.
  */
 
 import { ACCOUNT, XRD } from "./signer";
@@ -34,7 +33,7 @@ CALL_METHOD
 }
 
 /**
- * Send XRD from server wallet to a player (for the faucet; not called yet).
+ * Send XRD from server wallet to a player (for the faucet; nothing calls it).
  */
 export function sendXrdManifest(toAccount: string, amount: string): string {
   return `
