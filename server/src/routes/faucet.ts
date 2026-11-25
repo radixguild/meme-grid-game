@@ -9,7 +9,7 @@ const router = Router();
 const FAUCET_AMOUNT = 0.5; // XRD per claim
 const COOLDOWN_DAYS = 7;
 
-// GET /api/faucet/:address/eligible — check if player can claim free XRD
+// GET /api/faucet/:address/eligible — check if player can record a claim (no faucet XRD is sent)
 router.get("/faucet/:address/eligible", validateAddress, requireAuth({ mode: "required-for-wallets" }), (req, res) => {
   const { address } = req.params;
   const db = getDb();
@@ -33,7 +33,7 @@ router.get("/faucet/:address/eligible", validateAddress, requireAuth({ mode: "re
     res.json({
       ok: true,
       eligible: false,
-      reason: `Already claimed. Next eligible: ${nextEligible}`,
+      reason: `Claim already recorded. This server does not send faucet XRD. Next eligible: ${nextEligible}`,
       next_eligible: nextEligible,
       total_claims: totalClaims,
       faucet_amount: FAUCET_AMOUNT,
@@ -49,7 +49,7 @@ router.get("/faucet/:address/eligible", validateAddress, requireAuth({ mode: "re
   });
 });
 
-// POST /api/faucet/:address/claim — request free XRD for tx fees
+// POST /api/faucet/:address/claim — record a request for XRD for tx fees (nothing is sent)
 router.post("/faucet/:address/claim", validateAddress, requireAuth({ mode: "required-for-wallets" }), (req, res) => {
   const { address } = req.params;
   const db = getDb();
@@ -62,12 +62,12 @@ router.post("/faucet/:address/claim", validateAddress, requireAuth({ mode: "requ
   `).get(address, cooldownTs);
 
   if (recentClaim) {
-    res.status(429).json({ ok: false, error: "Faucet cooldown active. Try again later." });
+    res.status(429).json({ ok: false, error: "Faucet cooldown active: a claim is already recorded. This server does not send faucet XRD." });
     return;
   }
 
   // Record the claim as pending
-  // Phase 1: actual XRD send is not implemented yet — needs a funded server wallet
+  // No XRD is sent: nothing calls sendXrdManifest or marks a claim 'sent'.
   const result = db.prepare(`
     INSERT INTO faucet_claims (radix_address, amount, status)
     VALUES (?, ?, 'pending')
@@ -79,7 +79,7 @@ router.post("/faucet/:address/claim", validateAddress, requireAuth({ mode: "requ
 
   res.json({
     ok: true,
-    message: `Faucet claim recorded: ${FAUCET_AMOUNT} XRD. Distribution is processed in batches.`,
+    message: `Faucet claim recorded: ${FAUCET_AMOUNT} XRD. XRD distribution is not running, so no XRD has been sent.`,
     claim_id: result.lastInsertRowid,
     amount: FAUCET_AMOUNT,
     status: "pending",

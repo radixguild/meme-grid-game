@@ -146,6 +146,10 @@ yet deployed (marked "not yet deployed" below)._
   `POST /api/csp-report` answered 204). A local sweep on 2026-11-06 (production build, home page
   and the opened Connect popover) logged no violations. Enforcing mode has not been turned on.
 - **The gift rails** (`/gift`). No destination is configured, so the page is a 404 by design.
+- **The XRD faucet sends nothing.** `POST /api/faucet/:address/claim` records a `pending` claim
+  and moves no XRD; sending is not built: no code calls the XRD send builder or marks a claim
+  `sent`. Nothing in the web app calls the route, and the admin stats field `total_xrd_dispensed`
+  adds up recorded claims, not XRD sent (code read 2026-11-26).
 
 ## Disclosures
 
