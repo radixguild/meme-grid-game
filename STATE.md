@@ -11,7 +11,9 @@ the conclusions, not the derivation.
 _Last written: 15 Nov 2026. On that date the deploy facts in "Right now" (PR #12 and #13
 deployed 2026-11-13; live site on `main` at `d1aae0d`) and the direction and next steps were
 checked. The
-rest of the note below is the earlier header and was not re-read on 15 Nov 2026._
+rest of the note below is the earlier header and was not re-read on 15 Nov 2026. Edited
+26 Nov 2026 to record that day's deploy of `22dd1dc` and the owner's read-back after it (the
+values named in "Deployed build"); nothing else was re-read._
 
 _Earlier header (2026-11-07, AEDT). Re-read on 2026-11-06: the deployed commit, the live site's public health endpoint,
 `GET /api/token/info`, `GET /api/vault/nfts`, the response headers and `/gift`; and, on the
@@ -24,12 +26,20 @@ yet deployed (marked "not yet deployed" below)._
 
 ## Right now *(as of 2026-11-15, except where a line gives a different date)*
 
-- **Deployed build.** The live site runs `main` at commit `d1aae0d` (PR #13, post-deploy
-  hardening: test environment isolation, vault listing fails closed). It was deployed on
-  2026-11-13 at about 06:18 UTC. PR #12 (pre-launch safety) was deployed the same day at about
-  05:19 UTC. As of 2026-11-15 nothing on `main` was waiting to be deployed; the change in the
-  next entry was merged to `main` after that date and has not been deployed.
-- **On `main` (not yet deployed): the #13 review follow-ups.** Three changes, each with tests in
+- **Deployed build.** The live site runs `main` at commit `22dd1dc` (PR #35: the faucet answers
+  say plainly that the server sends no faucet XRD). It was deployed on 2026-11-26 (server
+  restarted at about 04:20 UTC). The deploy also carried PR #15 and PR #29 (the #13 review
+  follow-ups in the next entry, and dependency updates including `better-sqlite3` 11.10.0 →
+  13.0.3, which needs Node 22 or later) and the docs- and CI-only PRs #16–#19, #33 and #34. No
+  migration was in the range. Read back by the owner that day: the server tests on the host
+  passed (463 passed, 0 failed, 2 skipped); after the restart the signer's custody check passed,
+  no migration was applied, the public health endpoint reported 43 player rows and 16 boards, no
+  guest id was on the public leaderboard, `GET /api/vault/nfts` returned
+  `treasury_address: null`, and `GET /api/token/info` reported `vault_component: null` and
+  `phase: 1`; both processes were still up with no new restart about three hours later. On
+  2026-11-26 nothing on `main` was waiting to be deployed. The previous deploy was `d1aae0d`
+  (PR #13) on 2026-11-13 at about 06:18 UTC.
+- **Deployed 2026-11-26: the #13 review follow-ups.** Three changes, each with tests in
   `server/`. (1) `GET /api/vault/nfts` runs one holdings check at a time (concurrent requests
   share it), starts no new check for 30 seconds after one fails, and each call through the
   server's shared Gateway client (`services/gateway.ts`) gives up after 15 seconds; the signer
@@ -45,13 +55,14 @@ yet deployed (marked "not yet deployed" below)._
 - **Direction (owner, 2026-11-13).** Launch MEME GRID as a minimal, honest stack test: prove the
   stack can do the job or not, and why. Prizes follow effort rules and are signed by a person.
   No server key signs prizes. No raffles.
-- **Next (planned, no dates set).** Deploy the #13 review follow-ups (above). A dedicated prize
-  account set up by the operator. A launch brief for contributors.
+- **Next (planned, no dates set).** A dedicated prize account set up by the operator. A launch
+  brief for contributors.
 - **The prize-vault blueprint is not needed for this launch path**, because awards are signed
   by hand.
 
 > Superseded 2026-11-15: the "Deployed build" entry below describes the #12 deploy only. The
-> live site now runs `d1aae0d`. Its read-back values are kept as a record of 2026-11-13.
+> live site now runs the commit named in "Deployed build" above. Its read-back values are kept
+> as a record of 2026-11-13.
 
 - **Earlier deployed build (#12).** Commit `dad57e5157ac5bd49ef58e2a4d97bfd80b44df02` of this repository was
   deployed to the live site on 2026-11-13 (server restarted at about 05:19 UTC). Read back by the
