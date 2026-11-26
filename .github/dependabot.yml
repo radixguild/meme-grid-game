@@ -27,6 +27,11 @@ updates:
     groups:
       web-minor-and-patch:
         update-types: [minor, patch]
+    # @types/node follows the Node major the server runs (22 on 2026-11-26): types for a newer
+    # major let code compile against APIs the runtime lacks. Raise the bound when the runtime moves.
+    ignore:
+      - dependency-name: "@types/node"
+        versions: [">=23.0.0"]
 
   # server/: the Express API and mint worker (a separate package and lockfile).
   - package-ecosystem: npm
@@ -42,6 +47,11 @@ updates:
     groups:
       server-minor-and-patch:
         update-types: [minor, patch]
+    # @types/node follows the Node major the server runs (22 on 2026-11-26): types for a newer
+    # major let code compile against APIs the runtime lacks. Raise the bound when the runtime moves.
+    ignore:
+      - dependency-name: "@types/node"
+        versions: [">=23.0.0"]
 
   # Workflow actions are pinned to commit SHAs with a version comment; Dependabot
   # updates both together.
