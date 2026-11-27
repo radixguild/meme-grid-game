@@ -114,36 +114,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     anyRdt.walletApi.dataRequestControl?.provideChallengeGenerator?.(generator);
   }, [rdt]);
 
-  // Listen for signed-challenge responses from the wallet and trade them
-  // for a session token.
-  useEffect(() => {
-    if (!rdt) return;
-    const anyRdt = rdt as unknown as {
-      walletApi: {
-        walletData$: {
-          subscribe: (fn: (data: any) => void) => { unsubscribe: () => void };
-        };
-      };
-    };
-    const sub = anyRdt.walletApi.walletData$.subscribe(async (data: any) => {
-      const challenges: Array<any> = data?.proofs ?? data?.signedChallenges ?? [];
-      const accountChallenge = challenges.find(
-        (c) => c?.type === "account" && c?.address && c?.proof
-      );
-      if (!accountChallenge) return;
-      if (
-        session &&
-        session.address === accountChallenge.address &&
-        session.expiresAt - CLOCK_SKEW_BUFFER_SEC > Math.floor(Date.now() / 1000)
-      ) {
-        return; // already authenticated for this address
-      }
-      await verifyAndStore(accountChallenge);
-    });
-    return () => sub.unsubscribe();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rdt, session?.address]);
-
   const verifyAndStore = useCallback(async (signedChallenge: any) => {
     setIsAuthenticating(true);
     setLastError(null);
@@ -173,6 +143,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsAuthenticating(false);
     }
   }, []);
+
+  // Listen for signed-challenge responses from the wallet and trade them
+  // for a session token.
+  useEffect(() => {
+    if (!rdt) return;
+    const anyRdt = rdt as unknown as {
+      walletApi: {
+        walletData$: {
+          subscribe: (fn: (data: any) => void) => { unsubscribe: () => void };
+        };
+      };
+    };
+    const sub = anyRdt.walletApi.walletData$.subscribe(async (data: any) => {
+      const challenges: Array<any> = data?.proofs ?? data?.signedChallenges ?? [];
+      const accountChallenge = challenges.find(
+        (c) => c?.type === "account" && c?.address && c?.proof
+      );
+      if (!accountChallenge) return;
+      if (
+        session &&
+        session.address === accountChallenge.address &&
+        session.expiresAt - CLOCK_SKEW_BUFFER_SEC > Math.floor(Date.now() / 1000)
+      ) {
+        return; // already authenticated for this address
+      }
+      await verifyAndStore(accountChallenge);
+    });
+    return () => sub.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rdt, session?.address]);
 
   const signOut = useCallback(async () => {
     const current = session;
