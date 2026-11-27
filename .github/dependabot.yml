@@ -52,6 +52,12 @@ updates:
     ignore:
       - dependency-name: "@types/node"
         versions: [">=23.0.0"]
+      # From 5.1.1 the typings declare route params as `string | string[]` (ParamsDictionary),
+      # which fails `tsc` on every `req.params` read in server/src (95 errors, checked 2026-11-27;
+      # 5.1.0 still compiles). package.json pins it through `overrides`. Remove this entry in the
+      # same PR that narrows those `req.params` reads, then let Dependabot propose the new version.
+      - dependency-name: "@types/express-serve-static-core"
+        versions: [">=5.1.1"]
 
   # Workflow actions are pinned to commit SHAs with a version comment; Dependabot
   # updates both together.
