@@ -1,12 +1,12 @@
 /**
  * POST /api/csp-report — sink for the browser's own CSP violation reports.
  *
- * next.config.ts sends `Content-Security-Policy-Report-Only` with
- * `report-uri /api/csp-report`. A report-only policy blocks nothing; this route
- * is where the violations it would have blocked get counted, so the later
- * enforce PR has evidence instead of a guess. It lives here, not in a Next
- * route handler, because deploy/Caddyfile hands every /api/* path to this
- * server.
+ * next.config.ts sends an enforcing `Content-Security-Policy` with
+ * `report-uri /api/csp-report` (it was report-only before; the local sweeps
+ * described in next.config.ts came back clean). The browser blocks each
+ * violating load and reports it here, so a page the policy breaks shows up in
+ * the log. It lives here, not in a Next route handler, because
+ * deploy/Caddyfile hands every /api/* path to this server.
  *
  * What it does: parse the report, write ONE log line, answer 204. It stores
  * nothing (no DB import in this file, and the test checks the DB's change

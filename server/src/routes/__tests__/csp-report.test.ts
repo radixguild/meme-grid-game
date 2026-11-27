@@ -1,4 +1,4 @@
-// POST /api/csp-report — the sink for next.config.ts's report-only CSP.
+// POST /api/csp-report — the sink for next.config.ts's enforced CSP.
 //
 // The route accepts both report shapes, logs one line with no IP, no query
 // string and no body echo, caps the body at 8kb, stores nothing, and is not

@@ -9,9 +9,10 @@
  * config, not per-request logic, so there's nothing more dynamic to test
  * without booting a server).
  *
- * The CSP is REPORT-ONLY (2026-10-08, see next.config.ts): the tests below
- * pin that it reports to the Express sink via report-uri alone, and that no
- * enforcing Content-Security-Policy header has crept in ahead of the sweep.
+ * The CSP is ENFORCED (see next.config.ts): the tests below pin that it is
+ * sent as `Content-Security-Policy`, that no report-only copy has crept back
+ * in (a report-only header blocks nothing), and that it still reports to the
+ * Express sink via report-uri alone.
  */
 
 import { describe, test } from "node:test";
@@ -69,19 +70,19 @@ describe("next.config.ts security headers", () => {
     assert.equal(byKey["Permissions-Policy"], "camera=(), microphone=(), geolocation=()");
   });
 
-  test("sends the CSP as Report-Only, never as an enforcing header", async () => {
+  test("enforces the CSP, with no report-only copy", async () => {
     const byKey = await headersByKey();
     const keys = Object.keys(byKey).map((k) => k.toLowerCase());
 
-    assert.ok(byKey["Content-Security-Policy-Report-Only"], "expected a Content-Security-Policy-Report-Only header");
-    // Enforcing waits for the report-only sweep (next.config.ts). An enforcing
-    // header here would block live loads the reports have not cleared yet.
-    assert.ok(!keys.includes("content-security-policy"), "no enforcing Content-Security-Policy header yet");
+    assert.ok(byKey["Content-Security-Policy"], "expected an enforcing Content-Security-Policy header");
+    // A report-only header blocks nothing; it must not stand in for, or sit
+    // beside, the enforcing one.
+    assert.ok(!keys.includes("content-security-policy-report-only"), "no Content-Security-Policy-Report-Only header");
   });
 
   test("reports to /api/csp-report via report-uri only — no report-to", async () => {
     const byKey = await headersByKey();
-    const policy = directives(byKey["Content-Security-Policy-Report-Only"]!);
+    const policy = directives(byKey["Content-Security-Policy"]!);
     const keys = Object.keys(byKey).map((k) => k.toLowerCase());
 
     assert.equal(policy.get("report-uri"), "/api/csp-report");
@@ -93,7 +94,7 @@ describe("next.config.ts security headers", () => {
 
   test("pins the policy's directives", async () => {
     const byKey = await withNodeEnv("production", headersByKey);
-    const policy = directives(byKey["Content-Security-Policy-Report-Only"]!);
+    const policy = directives(byKey["Content-Security-Policy"]!);
 
     assert.deepEqual(Object.fromEntries(policy), {
       "default-src": "'self'",
@@ -113,10 +114,10 @@ describe("next.config.ts security headers", () => {
   test("grants 'unsafe-eval' to `next dev` only", async () => {
     for (const env of ["production", "test", undefined]) {
       const byKey = await withNodeEnv(env, headersByKey);
-      const scriptSrc = directives(byKey["Content-Security-Policy-Report-Only"]!).get("script-src")!;
+      const scriptSrc = directives(byKey["Content-Security-Policy"]!).get("script-src")!;
       assert.ok(!scriptSrc.includes("'unsafe-eval'"), `NODE_ENV=${env}: ${scriptSrc}`);
     }
     const dev = await withNodeEnv("development", headersByKey);
-    assert.equal(directives(dev["Content-Security-Policy-Report-Only"]!).get("script-src"), "'self' 'unsafe-inline' 'unsafe-eval'");
+    assert.equal(directives(dev["Content-Security-Policy"]!).get("script-src"), "'self' 'unsafe-inline' 'unsafe-eval'");
   });
 });

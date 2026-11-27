@@ -11,17 +11,18 @@ import type { NextConfig } from "next";
 // values for its page routes lives in the Guild's private operations
 // repository.
 //
-// ── Content-Security-Policy: REPORT-ONLY (2026-10-08) ────────────────────────
-// Sent as `Content-Security-Policy-Report-Only`, so it blocks nothing. A load
-// the policy would refuse still happens; the browser also POSTs a report to
-// /api/csp-report, which server/src/routes/csp-report.ts answers with one log
-// line and stores nothing. The Guild app took the same path (report-only
-// 2026-09-14, enforced 2026-09-30 after a headless sweep of every route plus
-// the Radix Connect Button recorded 0 violations — the CSP comment block in
-// guild-app/next.config.ts there). This app's wallet-connect flow
-// (@radixdlt/radix-dapp-toolkit) gets the same treatment: enforce in a later
-// PR, once this header's reports are in. Enforcing is a rename of the key to
-// `Content-Security-Policy`.
+// ── Content-Security-Policy: ENFORCED ────────────────────────────────────────
+// Sent as `Content-Security-Policy`, so the browser refuses any load the
+// policy does not allow. It was report-only from 2026-10-08
+// (`Content-Security-Policy-Report-Only`, which blocks nothing); enforcing was
+// the planned rename of the key once the sweeps below came back clean. The
+// browser still POSTs each refused load to /api/csp-report, which
+// server/src/routes/csp-report.ts answers with one log line and stores
+// nothing, so a blocked load shows up in the API log. The Guild app took the
+// same path (report-only 2026-09-14, enforced 2026-09-30 after a headless
+// sweep of every route plus the Radix Connect Button recorded 0 violations —
+// the CSP comment block in guild-app/next.config.ts there).
+// To fall back to report-only, rename the key back; nothing else changes.
 //
 // Local sweep, 2026-10-08 (headless Chromium 147, production build behind a
 // proxy that routes like deploy/Caddyfile): all 11 app routes (/gift answers
@@ -60,8 +61,8 @@ import type { NextConfig } from "next";
 //   Connect relay (radix-connect-relay.radixdlt.com in the toolkit bundle).
 //   The Guild's https://radixguild.com entry is dropped: nothing here fetches
 //   it (the footer only links to it). wss://*.radixdlt.com is kept from the
-//   Guild's set although the 2.3.0 bundle opens no WebSocket; the enforce PR
-//   can drop it.
+//   Guild's set although the 2.3.0 bundle opens no WebSocket; dropping it is
+//   left to a separate change so enforcing changed nothing but the key.
 // - frame-ancestors 'none': the CSP form of X-Frame-Options: DENY below.
 //
 // report-uri ONLY: no `report-to`, no `Reporting-Endpoints`. The Guild app
@@ -74,8 +75,8 @@ import type { NextConfig } from "next";
 //
 // X-Frame-Options: DENY, not a narrower allow-list — grepped src/, server/src
 // and docs/ for iframe/embed/widget: no hits, no documented or planned
-// embedding surface. It does the blocking until the CSP above is enforced;
-// frame-ancestors only reports for now.
+// embedding surface. Kept alongside frame-ancestors 'none' for browsers that
+// read only the older header.
 const PERMISSIONS_POLICY = "camera=(), microphone=(), geolocation=()";
 
 // Caddy sends /api/* to the Express server (deploy/Caddyfile), so this
@@ -127,8 +128,8 @@ const nextConfig: NextConfig = {
           },
           { key: "X-Frame-Options", value: "DENY" },
           { key: "Permissions-Policy", value: PERMISSIONS_POLICY },
-          // Report-only: see the comment block at the top of this file.
-          { key: "Content-Security-Policy-Report-Only", value: cspDirectives() },
+          // Enforced: see the comment block at the top of this file.
+          { key: "Content-Security-Policy", value: cspDirectives() },
         ],
       },
     ];

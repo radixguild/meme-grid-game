@@ -138,8 +138,9 @@ On `<host>`:
   `<api-url>` is the value of `NEXT_PUBLIC_API_URL`. These return `ok: true` with uptime and player and board counts, or HTTP 500 with
   `ok: false` if the database cannot be read (`server/src/routes/health.ts:7-20`,
   `server/src/app.ts:51`).
-- **App:** `https://<domain>/` returns 200. Its response carries a
-  `Content-Security-Policy-Report-Only` header (`STATE.md:142-147`).
+- **App:** `https://<domain>/` returns 200. Its response carries an enforcing
+  `Content-Security-Policy` header and no `Content-Security-Policy-Report-Only` one
+  (`next.config.ts`).
 - **Public API spot check:** `GET <api-url>/token/info` reports the values in
   `STATE.md:77-80`, as long as STATE still describes the build you deployed.
 - Record the deployed commit and date in `STATE.md` in a follow-up pull request

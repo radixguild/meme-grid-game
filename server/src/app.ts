@@ -59,7 +59,7 @@ export function createApp() {
   app.use("/api", vaultRoutes);
   app.use("/api", faucetRoutes);
   app.use("/api", guestRoutes);
-  // CSP violation reports from next.config.ts's report-only policy. Mounted
+  // CSP violation reports from next.config.ts's enforced policy. Mounted
   // after rateLimit on purpose: the per-IP POST limit bounds the sink too.
   app.use("/api", cspReportRoutes);
   app.use("/api/auth", authRoutes);

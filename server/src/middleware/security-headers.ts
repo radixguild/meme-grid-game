@@ -7,7 +7,7 @@
  *
  * Tuned for the meme-grid-game API specifically — the public frontend
  * is a Next.js app at memegrid.radixguild.com which sets its own headers
- * in next.config.ts (its CSP is report-only for now, reporting to
+ * in next.config.ts (its CSP is enforced and reports refused loads to
  * routes/csp-report.ts). This file only secures the JSON API at
  * port 3004. Most of these headers don't matter for a pure JSON endpoint
  * (can't inject scripts into JSON) but we set them anyway because
