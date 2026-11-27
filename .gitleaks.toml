@@ -3,25 +3,21 @@
 # Runs in CI via .github/workflows/secret-scan.yml. Pinned to gitleaks 8.30.x semantics
 # to match the CI job's pinned GITLEAKS_VERSION.
 #
-# Baseline (2026-09-05): a full-history scan (134 commits) against gitleaks' default
-# ruleset with no allowlist found ZERO leaks —
-#   gitleaks git --no-banner --redact -c /dev/null
-# `useDefault = true` below inherits that same ruleset. The allowlist stays empty on
-# purpose: there is nothing benign-but-flagged to carve out yet. If a future scan turns
-# up a genuine false positive (a doc placeholder, a test fixture shaped like a key),
-# add a narrowly-scoped, value-targeted regex here — never a whole-file or whole-path
-# exemption — so a real secret landing in the same file still trips the scanner.
+# Baseline: a full-history scan of this repository against gitleaks' default ruleset
+# with no allowlist at all finds ZERO leaks —
+#   gitleaks git --no-banner --redact -c /dev/null --log-opts=HEAD
+# (re-run 2026-11-27 over the 31 commits then on main; re-run it rather than trust a
+# count written here). `useDefault = true` below inherits that same ruleset.
+#
+# There is NO allowlist, on purpose: nothing benign-but-flagged needs carving out, and
+# the `.env.example` files are scanned like every other file, so a real secret pasted
+# into one fails CI. secret-scan.yml's self-test step proves that on every run. If a
+# future scan turns up a genuine false positive (a doc placeholder, a test fixture
+# shaped like a key), add a narrowly-scoped, value-targeted `regexes` entry in an
+# allowlist table — never a whole-file or whole-path exemption — so a real secret
+# landing in the same file still trips the scanner.
 
 title = "meme-grid-game gitleaks config"
 
 [extend]
 useDefault = true
-
-[allowlist]
-description = "Known non-secret placeholders and example files"
-
-# Example env files are documentation, not real secrets. Real .env is gitignored
-# and never committed.
-paths = [
-  '''\.env\.example$''',
-]
