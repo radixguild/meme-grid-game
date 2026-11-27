@@ -31,7 +31,9 @@ trusts one proxy hop (`server/src/app.ts:32-35`).
   and pm2 on `<host>`.
 - **operator step, not in this repo:** configure the reverse proxy for `<domain>`. It must serve
   the app from `127.0.0.1:3005`, and serve the API from `127.0.0.1:3004` at the URL the frontend
-  was built with as `NEXT_PUBLIC_API_URL` (`src/lib/constants.ts:56-57`). The server mounts its
+  was built with as `NEXT_PUBLIC_API_URL` (`src/lib/constants.ts:56-57`). That URL must be on the
+  app's own origin (`https://<domain>/api`): the app's enforced CSP allows API calls to its own
+  origin only (`connect-src` in `next.config.ts`). The server mounts its
   routes under `/api` (`server/src/app.ts:51`). `CORS_ORIGINS` and `ROLA_ALLOWED_ORIGINS` must
   name the app's public origin (`CONFIG.md`).
 

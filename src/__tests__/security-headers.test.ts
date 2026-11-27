@@ -42,18 +42,20 @@ function directives(policy: string): Map<string, string> {
   );
 }
 
-async function withNodeEnv<T>(value: string | undefined, fn: () => Promise<T>): Promise<T> {
+async function withEnv<T>(name: string, value: string | undefined, fn: () => Promise<T>): Promise<T> {
   const env = process.env as Record<string, string | undefined>;
-  const saved = env.NODE_ENV;
-  if (value === undefined) delete env.NODE_ENV;
-  else env.NODE_ENV = value;
+  const saved = env[name];
+  if (value === undefined) delete env[name];
+  else env[name] = value;
   try {
     return await fn();
   } finally {
-    if (saved === undefined) delete env.NODE_ENV;
-    else env.NODE_ENV = saved;
+    if (saved === undefined) delete env[name];
+    else env[name] = saved;
   }
 }
+
+const withNodeEnv = <T>(value: string | undefined, fn: () => Promise<T>) => withEnv("NODE_ENV", value, fn);
 
 describe("next.config.ts security headers", () => {
   test("disables the X-Powered-By fingerprint", () => {
@@ -119,5 +121,28 @@ describe("next.config.ts security headers", () => {
     }
     const dev = await withNodeEnv("development", headersByKey);
     assert.equal(directives(dev["Content-Security-Policy"]!).get("script-src"), "'self' 'unsafe-inline' 'unsafe-eval'");
+  });
+
+  test("adds the API's origin to connect-src under `next dev` only", async () => {
+    const PROD_CONNECT = "'self' https://mainnet.radixdlt.com https://*.radixdlt.com wss://*.radixdlt.com";
+    const connectSrc = (byKey: Record<string, string>) => directives(byKey["Content-Security-Policy"]!).get("connect-src");
+
+    // Default API_URL (http://localhost:3004/api): another port is another
+    // origin, so an enforced 'self' alone would block local dev's API calls.
+    await withEnv("NEXT_PUBLIC_API_URL", undefined, async () => {
+      assert.equal(connectSrc(await withNodeEnv("development", headersByKey)), `${PROD_CONNECT} http://localhost:3004`);
+      for (const env of ["production", "test", undefined]) {
+        assert.equal(connectSrc(await withNodeEnv(env, headersByKey)), PROD_CONNECT, `NODE_ENV=${env}`);
+      }
+    });
+    // An explicit API URL: its origin only (no path).
+    await withEnv("NEXT_PUBLIC_API_URL", "http://127.0.0.1:4000/api", async () => {
+      assert.equal(connectSrc(await withNodeEnv("development", headersByKey)), `${PROD_CONNECT} http://127.0.0.1:4000`);
+      assert.equal(connectSrc(await withNodeEnv("production", headersByKey)), PROD_CONNECT);
+    });
+    // A relative API URL is same-origin: nothing added.
+    await withEnv("NEXT_PUBLIC_API_URL", "/api", async () => {
+      assert.equal(connectSrc(await withNodeEnv("development", headersByKey)), PROD_CONNECT);
+    });
   });
 });

@@ -2,10 +2,10 @@
  * POST /api/csp-report — sink for the browser's own CSP violation reports.
  *
  * next.config.ts sends an enforcing `Content-Security-Policy` with
- * `report-uri /api/csp-report` (it was report-only before; the local sweeps
- * described in next.config.ts came back clean). The browser blocks each
- * violating load and reports it here, so a page the policy breaks shows up in
- * the log. It lives here, not in a Next route handler, because
+ * `report-uri /api/csp-report` (it was report-only before; it is enforced on
+ * the strength of the local sweeps described in next.config.ts). The browser
+ * blocks each violating load and reports it here, so a page the policy breaks
+ * shows up in the log. It lives here, not in a Next route handler, because
  * deploy/Caddyfile hands every /api/* path to this server.
  *
  * What it does: parse the report, write ONE log line, answer 204. It stores
