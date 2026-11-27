@@ -1,5 +1,5 @@
 # gitleaks config — meme-grid-game
-# Secret-scanning guardrail (pre-public prerequisite; this repo is a flip candidate).
+# Secret-scanning guardrail for this public repository.
 # Runs in CI via .github/workflows/secret-scan.yml. Pinned to gitleaks 8.30.x semantics
 # to match the CI job's pinned GITLEAKS_VERSION.
 #
