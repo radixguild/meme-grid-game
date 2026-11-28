@@ -20,7 +20,10 @@ recorded deploy is `22dd1dc`. The range includes #43, which made the app's
 `Content-Security-Policy` header enforcing instead of report-only. On 2026-11-26 the live site
 still sent `Content-Security-Policy-Report-Only`. So the next deploy is the first with the
 enforcing CSP: check the header in section 6, and sign in with a wallet in a browser before you
-call the deploy done.
+call the deploy done. The range also changes dependencies in both folders (for example `next`
+in the root, `dotenv` 18 in `server/`), so take the `node_modules` copies in section 1. `dotenv`
+18 prints its "injected env" summary line (a count and a file name) to stderr, so expect it in
+the server's error log.
 
 This page covers deploying the game's two processes, the Next.js app and the Express API, from
 this repository, and rolling back to the previous build. It uses only what this repository
@@ -77,7 +80,10 @@ trusts one proxy hop (`server/src/app.ts:32-35`).
   - there is enough free disk for a second copy of both `node_modules` folders and `.next`.
 - **operator step, not in this repo:** back up the SQLite database (the file at `DB_PATH`,
   default `server/data/meme-grid.db`, `server/src/db/connection.ts:10`) and the current env
-  files. This repository has no backup script (`PROVENANCE.md:31-33`). Section 4 explains why
+  files. The database runs in WAL mode (`server/src/db/connection.ts:14`), so a plain copy of
+  the file while the server runs can miss committed rows still in its `-wal` file. Use SQLite's
+  online backup (`sqlite3 <db-file> ".backup <copy>"`), or stop the server and copy the file
+  with its `-wal` and `-shm` files. This repository has no backup script (`PROVENANCE.md:31-33`). Section 4 explains why
   a database backup is the only way to undo a migration.
 - **operator step, not in this repo:** keep copies of the current build output, so that you can
   roll back. `.gitignore:9-13` ignores copies named `.next.bak*/` and `server/dist.bak*/` in
@@ -112,8 +118,8 @@ All names, where each one is read, and which ones are secret are listed in
 
 Run these from `<app-dir>`, checked out at `<commit>`.
 
-- **operator step, not in this repo:** update `<app-dir>` to `<commit>`. `STATE.md:60-63`
-  records that the deploy directory became a checkout of this public repository on 2026-11-06.
+- **operator step, not in this repo:** update `<app-dir>` to `<commit>`. `STATE.md`
+  ("Earlier deployed build (#12)") records that the deploy directory became a checkout of this public repository on 2026-11-06.
 
 The 2026-11-26 deploy ran the server first, then the frontend.
 
@@ -140,18 +146,22 @@ npm run build
 The root `.npmrc` sets `ignore-scripts=true`. It applies to the install in the repository root
 only: `server/` has no `.npmrc` of its own, so `npm ci` there runs the install scripts of the
 packages in `server/package-lock.json`. `npm rebuild better-sqlite3` makes sure the one native
-module the server needs is built (`README.md:55-56`). The server's `build` script also copies the SQL migrations
+module the server needs loads (`README.md:55-56`). `README.md` and `CONTRIBUTING.md` say the
+root `.npmrc` is why the server needs this rebuild; that is not accurate for `server/`, as above. The server's `build` script also copies the SQL migrations
 into `dist/db/migrations/` (`server/package.json:8`). If they are missing, the server refuses to
 boot (`server/src/db/migrations/runner.ts:21-30`).
 
 Build before you restart. A comment in CI notes that the deploy depends on this order
-(`.github/workflows/ci.yml:52-58`). If the build fails, stop here. The running processes keep
-serving the previous build only if you did not replace or remove `.next` or `server/dist` by hand.
-Whether `next build` leaves the old `.next` usable after a failed build is unverified.
+(`.github/workflows/ci.yml:52-58`).
 
 The running app keeps serving while you build, but root `npm ci` replaces `node_modules` and
 `next build` rewrites `.next` underneath it. Expect the site to return errors for a few minutes,
 until the restart in section 5. Restart straight after a successful build.
+
+If a build step fails, do not stop there: by then the root install or the build may already
+have replaced what the running app uses, so the site is probably returning errors. Go to
+section 7, way B (restore the copies from section 1). Whether `next build` leaves the old
+`.next` usable after a failed build is unverified.
 
 ## 4. Migrations
 
@@ -209,8 +219,8 @@ On `<host>`:
   response headers.
 - **Later read,** a few hours on: both apps still `online`, restart counts unchanged, health
   `ok: true`. On 2026-11-26 this read was taken about three hours after the restart.
-- Record the deployed commit and date in `STATE.md` in a follow-up pull request
-  (`CONTRIBUTING.md:19-22`).
+- Record the deployed commit and date in `STATE.md` in a follow-up pull request. `STATE.md`
+  is the source of truth for what is deployed (`CONTRIBUTING.md:19-22`).
 
 ## 7. Rollback to the previous build
 
@@ -227,7 +237,9 @@ There are two ways back. Both end with the checkout on the previous commit.
 2. Run section 3 (build) again at that commit.
 3. Continue at step 3 below.
 
-**B. Restore the copies from section 1.** Faster, and needs those copies.
+**B. Restore the copies from section 1.** Faster, and needs those copies. If the range
+changed dependencies and you have no `node_modules` copies, use way A: an old `.next` on top
+of new dependencies (a different `next`, say) is not known to work.
 
 1. **operator step, not in this repo:** stop or hold both pm2 apps.
 2. **operator step, not in this repo:** put back the previous build output. Move the failed
@@ -239,8 +251,10 @@ There are two ways back. Both end with the checkout on the previous commit.
 Then, for either way:
 
 3. If the failed build applied a migration (look for `[migration] applied:` in its log) and the
-   previous build cannot run against the new schema: **operator step, not in this repo:** restore
-   the database backup from section 1. Rows written after the backup are lost.
+   previous build cannot run against the new schema: **operator step, not in this repo:** stop
+   `meme-grid-server`, remove the database's `-wal` and `-shm` files, and put the backup from
+   section 1 in place of the file at `DB_PATH`. Never restore under a running server or next
+   to an old `-wal` file. Rows written after the backup are lost.
 4. If you changed env values for this deploy, restore the previous env files.
 5. **operator step, not in this repo:** start or restart both pm2 apps.
 6. Repeat section 6 against the previous commit.
@@ -273,6 +287,6 @@ start (`server/src/config/load-env.ts:116-124`).
   (`deploy-nfts.ts:1-13`, `deploy-meme-token.ts:1-45`). They need built wasm and rpd files; the
   vault script's header says they must be built on Linux.
   `CONTRIBUTING.md:71-84` explains how to fetch and verify that build from CI. Per
-  `STATE.md:114-119`, the v2 vault is not deployed. These scripts are not part of an app deploy.
+  `STATE.md` ("Switched off or not built"), the v2 vault is not deployed. These scripts are not part of an app deploy.
 - **Reverse proxy, TLS, firewall, process start at boot, log rotation, backups:** operator tooling,
   not in this repository.
