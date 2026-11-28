@@ -80,7 +80,7 @@ trusts one proxy hop (`server/src/app.ts:32-35`).
   - there is enough free disk for a second copy of both `node_modules` folders and `.next`.
 - **operator step, not in this repo:** back up the SQLite database (the file at `DB_PATH`,
   default `server/data/meme-grid.db`, `server/src/db/connection.ts:10`) and the current env
-  files. The database runs in WAL mode (`server/src/db/connection.ts:14`), so a plain copy of
+  files. The database runs in WAL mode (`server/src/db/connection.ts:15`), so a plain copy of
   the file while the server runs can miss committed rows still in its `-wal` file. Use SQLite's
   online backup (`sqlite3 <db-file> ".backup <copy>"`), or stop the server and copy the file
   with its `-wal` and `-shm` files. This repository has no backup script (`PROVENANCE.md:31-33`). Section 4 explains why
